@@ -2,7 +2,7 @@
 
 Graph neural networks for fly visual system connectivity recovery, with agentic hyper-parameter optimization.
 
-**Project page:** [https://allierc.github.io/flyvis-gnn/](https://saalfeldlab.github.io/flyvis-gnn/)
+**Project page:** [https://saalfeldlab.github.io/flyvis-gnn/](https://saalfeldlab.github.io/flyvis-gnn/)
 
 ## Installation
 
