@@ -1,6 +1,10 @@
 # FlyVis-GNN
 
-Graph neural networks for fly visual system connectivity recovery, with agentic hyper-parameter optimization.
+Graph neural networks recover interpretable circuit models from neural activity.
+
+Synapse-level connectomes describe the structure of circuits, but not the electrical and chemical dynamics. Conversely, large-scale recordings of neural activity capture these dynamics, but not the circuit structure. We asked whether combining binary connectivity and recorded neural activity can be used to infer mechanistic models of neural circuits. We trained a graph neural network model (GNN) to forecast the activity of Drosophila visual system simulations. Trained on activity trajectories in response to visual inputs, the model recovers effective connectivity weights, neuron types, and nonlinear activation functions, even when 200% random connections are added to the adjacency matrix. Moreover, it correctly predicts causal effects of connection removal, demonstrating the ability to infer mechanistic dependencies directly from activity data. Our simple, flexible, and interpretable method recovers both structure and dynamics from incomplete anatomical reconstructions and activity.
+
+The repository also includes an agentic workflow for hyper-parameter optimization in this ill-posed inverse problem.
 
 **Project page:** [https://saalfeldlab.github.io/flyvis-gnn/](https://saalfeldlab.github.io/flyvis-gnn/)
 
