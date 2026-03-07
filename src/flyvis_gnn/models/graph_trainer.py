@@ -156,7 +156,13 @@ def data_train_flyvis(config, erase, best_model, device, log_file=None):
     gt_weights = torch.load(graphs_data_path(config.dataset, 'weights.pt'), map_location=device)
     edges = torch.load(graphs_data_path(config.dataset, 'edge_index.pt'), map_location=device)
     actual_n_edges = edges.shape[1]
-    if actual_n_edges != sim.n_edges:
+    expected_total = sim.n_edges + sim.n_extra_null_edges
+    if actual_n_edges == expected_total and sim.n_extra_null_edges > 0:
+        # Null edges already baked into saved data — keep n_edges and n_extra_null_edges as-is
+        # so model sizes W = n_edges + n_extra_null_edges = actual_n_edges
+        _logger.info(f'null edges in data: {sim.n_edges} base + {sim.n_extra_null_edges} null = {actual_n_edges}')
+    elif actual_n_edges != sim.n_edges:
+        # Edge removal case: actual < config, override n_edges
         _logger.info(f'n_edges mismatch: config={sim.n_edges}, actual={actual_n_edges} — using actual')
         config.simulation.n_edges = actual_n_edges
     _logger.info(f'{actual_n_edges} edges')
