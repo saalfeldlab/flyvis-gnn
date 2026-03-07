@@ -152,6 +152,15 @@ def data_train_flyvis(config, erase, best_model, device, log_file=None):
     else:
         _logger.info(f'svd analysis already exists: {svd_plot_path}')
 
+    # Load edges early so n_edges is correct before model creation
+    gt_weights = torch.load(graphs_data_path(config.dataset, 'weights.pt'), map_location=device)
+    edges = torch.load(graphs_data_path(config.dataset, 'edge_index.pt'), map_location=device)
+    actual_n_edges = edges.shape[1]
+    if actual_n_edges != sim.n_edges:
+        _logger.info(f'n_edges mismatch: config={sim.n_edges}, actual={actual_n_edges} — using actual')
+        config.simulation.n_edges = actual_n_edges
+    _logger.info(f'{actual_n_edges} edges')
+
     # Resolve checkpoint path from best_model argument
     checkpoint_path = None
     if best_model and best_model != '' and best_model != 'None':
@@ -198,10 +207,6 @@ def data_train_flyvis(config, erase, best_model, device, log_file=None):
     net = f"{log_dir}/models/best_model_with_{tc.n_runs - 1}_graphs.pt"
     _logger.info(f'network: {net}')
     _logger.info(f'initial tc.batch_size: {tc.batch_size}')
-
-    gt_weights = torch.load(graphs_data_path(config.dataset, 'weights.pt'), map_location=device)
-    edges = torch.load(graphs_data_path(config.dataset, 'edge_index.pt'), map_location=device)
-    _logger.info(f'{edges.shape[1]} edges')
 
     ids = np.arange(n_neurons)
 
