@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push:*)",
+      "WebFetch(domain:celltrackingchallenge.net)",
+      "WebFetch(domain:byotrack.readthedocs.io)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(conda run:*)"
+    ]
+  }
+}

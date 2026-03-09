@@ -1,0 +1,80 @@
+description: "flyvis DAVIS training noise_model_level 0.0"
+dataset: flyvis_noise_free
+simulation:
+  connectivity_file: to be specified
+  adjacency_matrix: ""
+  params:
+    - - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+  n_neurons: 13741
+  n_input_neurons: 1736
+  n_neuron_types: 65
+  n_edges: 434112
+  n_frames: 64000
+  delta_t: 0.02
+  baseline_value: 0
+  visual_input_type: DAVIS
+  noise_model_level: 0.0
+  seed: 42
+graph_model:
+  signal_model_name: flyvis_A
+  prediction: first_derivative
+  input_size: 5
+  n_layers: 3
+  hidden_dim: 80
+  output_size: 1
+  input_size_update: 7
+  n_layers_update: 3
+  hidden_dim_update: 80
+  aggr_type: add
+  embedding_dim: 4
+  update_type: generic
+  g_phi_positive: true
+plotting:
+  colormap: tab20
+  arrow_length: 1
+  xlim:
+    - -2.5
+    - 2.5
+  ylim:
+    - -100
+    - 100
+training:
+  n_epochs: 1
+  n_runs: 1
+  device: auto
+  recurrent_training: false
+  batch_size: 2
+  batch_ratio: 1
+  small_init_batch_size: false
+  sparsity: none
+  data_augmentation_loop: 20
+  learning_rate_W_start: 0.0006
+  learning_rate_start: 0.0018
+  learning_rate_embedding_start: 0.00155
+  coeff_g_phi_diff: 1500
+  coeff_f_theta_msg_diff: 0
+  coeff_g_phi_norm: 0
+  coeff_g_phi_weight_L1: 0.0
+  coeff_f_theta_weight_L1: 0
+  coeff_g_phi_weight_L2: 0
+  coeff_f_theta_weight_L2: 0.001
+  coeff_W_L1: 0
+  coeff_W_L2: 1.5e-06
+  regul_annealing_rate: 0
+  w_init_mode: "randn_scaled"
+  seed: 42
+claude:
+  n_epochs: 1
+  data_augmentation_loop: 20
+  n_iter_block: 12
+  ucb_c: 1.414
+  n_parallel: 4
+  node_name: a100
+  generate_data: true
+  training_time_target_min: 60
+  interaction_code: false
+  case_study: "CV_robustness"
+  case_study_brief: "Achieve low CV over 8 seeds. Best config: embedding_dim=4, conn_R2=0.927, CV=0.30% over 4 seeds (iters 61-64). Catastrophic failure rate ~1/5. Target: CV<3%, mean conn_R2>0.92 over 8 consecutive seeds. At most 1 seed below 0.9 out of 8."

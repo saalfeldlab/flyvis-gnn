@@ -1,0 +1,52 @@
+description: "flyvis DAVIS noise_model_level 0.0 with 50% edge ablation"
+dataset: flyvis_noise_free_mask_50
+simulation:
+  connectivity_file: to be specified
+  adjacency_matrix: ""
+  params:
+    - - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+  n_neurons: 13741
+  n_input_neurons: 1736
+  n_neuron_types: 65
+  n_edges: 434112
+  n_frames: 64000
+  delta_t: 0.02
+  baseline_value: 0
+  visual_input_type: DAVIS
+  noise_model_level: 0.0
+  ablation_ratio: 0.5
+  ablation_seed: 42
+  seed: 42
+graph_model:
+  signal_model_name: flyvis_A
+  prediction: first_derivative
+  input_size: 5
+  n_layers: 3
+  hidden_dim: 80
+  output_size: 1
+  input_size_update: 7
+  n_layers_update: 3
+  hidden_dim_update: 80
+  aggr_type: add
+  embedding_dim: 4
+  update_type: generic
+  g_phi_positive: true
+plotting:
+  colormap: tab20
+  arrow_length: 1
+  xlim:
+    - -2.5
+    - 2.5
+  ylim:
+    - -100
+    - 100
+training:
+  n_epochs: 1
+  n_runs: 1
+  device: auto
+  batch_size: 2
+  data_augmentation_loop: 20
+  seed: 42

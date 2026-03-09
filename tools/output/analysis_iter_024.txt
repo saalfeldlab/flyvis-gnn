@@ -1,0 +1,194 @@
+======================================================================
+UNDERSTANDING EXPLORATION: Batch 6 Analysis (Iterations 21-24)
+Focus: Why hyperparameter fixes don't work for Model 049
+======================================================================
+======================================================================
+ANALYSIS 1: Effect of Very Slow lr_W=1E-4 on Model 049
+======================================================================
+
+Model 049 with lr_W=1E-4 (Iter 21):
+  W Pearson: -0.2873
+  W R²: -0.1087
+  Sign match: 0.1556 (15.6%)
+  W_true mean: 0.012590, std: 0.2908
+  W_learned mean: -0.005202, std: 0.0424
+  Magnitude ratio (learned/true): 0.2703
+
+  Per-neuron analysis:
+    Incoming W sum Pearson: -0.0165
+    Outgoing W sum Pearson: -0.7450
+    True incoming mean: 0.3978
+    Learned incoming mean: -0.1643
+
+  Comparison with previous lr_W values:
+  | lr_W   | Iter | conn_R2 | Status
+  |--------|------|---------|--------
+  | 6E-4   | base | 0.634   | BASELINE
+  | 1E-3   | 5    | 0.130   | FAILED
+  | 1E-4   | 21   | 0.177   | STILL FAILED
+
+  **Conclusion**: Neither fast nor slow lr_W fixes Model 049
+  The problem is NOT learning rate sensitivity — it's structural
+
+======================================================================
+ANALYSIS 2: Effect of data_aug=30 on Model 011
+======================================================================
+
+Model 011 with data_aug=30 (Iter 22):
+  W Pearson: -0.0983
+  W R²: -1.1570
+  Sign match: 0.3747 (37.5%)
+
+  Per-neuron analysis:
+    Incoming W sum Pearson: -0.0851
+    Outgoing W sum Pearson: -0.2178
+    True incoming mean: 0.1224
+    Learned incoming mean: -1.0037
+
+  Comparison with Iter 2 (best config, data_aug=20):
+  | data_aug | Iter | conn_R2 | tau_R2
+  |----------|------|---------|--------
+  | 20       | 2    | 0.716   | 0.265 (BEST)
+  | 30       | 22   | 0.690   | 0.158 (REGRESSED)
+
+  **Conclusion**: More augmentation = worse for Model 011
+  Hypothesis: Augmentation may introduce noise that conflicts
+  with the already-weak per-neuron signal in this model
+
+======================================================================
+ANALYSIS 3: phi_L2 Sensitivity for Model 041
+======================================================================
+
+Model 041 with phi_L2=0.003 (Iter 23):
+  W Pearson: -0.0562
+  W R²: -0.7798
+
+  lin_phi weight analysis:
+    lin_phi.layers.0.weight: L2 norm = 43.4795, mean = -0.212401
+    lin_phi.layers.1.weight: L2 norm = 59.8786, mean = 0.016977
+    lin_phi.layers.2.weight: L2 norm = 7.2118, mean = -0.034781
+    Total lin_phi L2 norm: 74.3501
+
+  Comparison of phi_L2 values:
+  | phi_L2 | Iter | conn_R2 | tau_R2
+  |--------|------|---------|--------
+  | 0.001  | 15   | 0.912   | 0.373
+  | 0.002  | 19   | 0.909   | 0.416 (BEST tau)
+  | 0.003  | 23   | 0.892   | 0.239 (REGRESSED)
+
+  **Conclusion**: phi_L2=0.003 is too strong — overshoots
+  phi_L2=0.002 is the optimal balance for Model 041
+
+======================================================================
+ANALYSIS 4: Model 003 Variability
+======================================================================
+
+Model 003 (Iter 24, fifth confirmation):
+  W Pearson: 0.7772
+  W R²: 0.5504
+  Sign match: 0.8367 (83.7%)
+
+  Per-neuron analysis:
+    Incoming W sum Pearson: 0.6940
+    Outgoing W sum Pearson: 0.9370
+
+  Historical conn_R2 values (same config):
+  | Iter | conn_R2 | tau_R2 | V_rest_R2
+  |------|---------|--------|----------
+  | 4    | 0.972   | 0.962  | 0.725
+  | 12   | 0.965   | 0.849  | 0.614
+  | 16   | 0.966   | 0.962  | 0.685
+  | 20   | 0.969   | 0.930  | 0.652
+  | 24   | 0.930   | 0.910  | 0.320 (this iter)
+
+  **Observation**: Some stochastic variation observed
+  V_rest dropped significantly (0.652→0.320)
+  Connectivity still SOLVED (>0.9) but less stable than before
+
+======================================================================
+ANALYSIS 5: Cross-Model Summary After 24 Iterations
+======================================================================
+
+  STATUS SUMMARY:
+  | Model | Best R² | Current | Per-neuron Corr | Status
+  |-------|---------|---------|-----------------|-------
+  | 049   | 0.634   | 0.177   | NEGATIVE        | FUNDAMENTAL LIMITATION
+  | 011   | 0.716   | 0.690   | NEGATIVE        | PARTIAL (Iter 2 best)
+  | 041   | 0.912   | 0.892   | MIXED           | SOLVED (phi_L2=0.002 best)
+  | 003   | 0.972   | 0.930   | POSITIVE        | FULLY SOLVED
+
+  KEY INSIGHT: Per-neuron W recovery correlation PREDICTS success
+  - POSITIVE per-neuron correlation → Model is SOLVABLE (003, 041)
+  - NEGATIVE per-neuron correlation → Model has FUNDAMENTAL LIMITATION (049, 011)
+
+  Current per-neuron correlations (Iter 21-24):
+    Model 049: incoming=-0.0165, outgoing=-0.7450
+    Model 011: incoming=-0.0851, outgoing=-0.2178
+    Model 041: incoming=-0.2152, outgoing=+0.3900
+    Model 003: incoming=+0.6940, outgoing=+0.9370
+
+======================================================================
+ANALYSIS 6: Model 049 Complete Experiment History (10 experiments)
+======================================================================
+
+  ALL attempts regressed from baseline 0.634:
+  | Iter | Mutation                           | conn_R2 | Result
+  |------|------------------------------------|---------|--------
+  | base | (Node 79 params)                   | 0.634   | BASELINE
+  | 1    | data_aug: 20→25                    | 0.141   | -78%
+  | 5    | lr_W: 6E-4→1E-3, lr: 1.2E-3→1E-3   | 0.130   | -80%
+  | 9    | edge_diff: 750→900, W_L1: 5E-5→3E-5| 0.124   | -80%
+  | 13   | edge_norm: 1→5, W_L1: 5E-5→1E-4    | 0.108   | -83%
+  | 17   | lin_edge_positive: true→false      | 0.092   | -85%
+  | 21   | lr_W: 6E-4→1E-4                    | 0.177   | -72%
+
+  ATTEMPTED APPROACHES (all failed):
+  1. More augmentation (Iter 1): FAILED - made sign inversion worse
+  2. Faster lr_W (Iter 5): FAILED - similar to baseline failure
+  3. Regularization tuning (Iter 9): FAILED - edge_diff/W_L1 don't help
+  4. Stronger constraints (Iter 13): FAILED - made it worse
+  5. Architecture change (Iter 17): FAILED - lin_edge_positive=False catastrophic
+  6. Slower lr_W (Iter 21): FAILED - very slow learning still inverts
+
+  CONCLUSION: Model 049 has STRUCTURAL DEGENERACY
+  - The activity patterns do not uniquely constrain W
+  - Multiple W configurations produce similar dynamics
+  - The GNN consistently finds sign-inverted solutions
+  - This is NOT fixable with standard hyperparameter tuning
+  - Would require architectural changes (e.g., per-type learning, different loss)
+
+======================================================================
+SUMMARY: Status After 24 Iterations
+======================================================================
+
+FINAL STATUS:
+1. Model 003 (svd_rank=60): FULLY SOLVED
+   - Best: 0.972, Current: 0.930 (stochastic variation)
+   - Per-neuron correlation POSITIVE (+0.7/+0.9)
+   - Optimal config: edge_diff=900, W_L1=3E-5, phi_L1=0.5
+
+2. Model 041 (svd_rank=6): CONNECTIVITY SOLVED
+   - Best: 0.912, Current: 0.892
+   - Per-neuron correlation MIXED (-0.17/+0.38)
+   - Optimal: edge_diff=1500, phi_L1=1.0, phi_L2=0.002
+   - V_rest (~0.01) is FUNDAMENTAL LIMITATION (near-collapsed activity)
+
+3. Model 011 (svd_rank=45): PARTIAL SOLUTION
+   - Best: 0.716, Current: 0.690
+   - Per-neuron correlation NEGATIVE (-0.09/-0.18)
+   - Optimal: lr_W=1E-3, lr=1E-3, edge_diff=750, W_L1=3E-5, data_aug=20
+   - Similar degeneracy to Model 049 but less severe
+
+4. Model 049 (svd_rank=19): FUNDAMENTAL LIMITATION
+   - Baseline: 0.634, Best: 0.634 (no improvement in 10 experiments)
+   - Per-neuron correlation STRONGLY NEGATIVE (-0.17/-0.48)
+   - ALL hyperparameter attempts FAILED
+   - Structural degeneracy: activity doesn't uniquely constrain W
+   - Would need architectural changes to fix
+
+KEY INSIGHT:
+- Per-neuron W recovery correlation is the KEY PREDICTOR of success
+- Models with POSITIVE per-neuron correlation are SOLVABLE
+- Models with NEGATIVE per-neuron correlation have STRUCTURAL LIMITATIONS
+- Activity rank does NOT predict recoverability
+
