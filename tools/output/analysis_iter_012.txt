@@ -1,0 +1,239 @@
+======================================================================
+ANALYSIS ITER 012: The Model 049 Paradox
+======================================================================
+Why does WRONG connectivity produce CORRECT dynamics?
+
+Loaded Model 049: W shape (434112,), edge_index shape (2, 434112)
+Loaded Model 011: W shape (434112,), edge_index shape (2, 434112)
+Loaded Model 041: W shape (434112,), edge_index shape (2, 434112)
+Loaded Model 003: W shape (434112,), edge_index shape (2, 434112)
+
+======================================================================
+1. THE PARADOX: W is wrong but tau/V_rest are right
+======================================================================
+
+Metric Summary (from training logs):
+------------------------------------------------------------
+Model    conn_R2      tau_R2       V_rest_R2    Paradox?  
+------------------------------------------------------------
+049      0.124        0.899        0.666        YES       
+011      0.681        0.103        0.052        no        
+041      0.911        0.253        0.010        no        
+003      0.965        0.849        0.614        no        
+
+======================================================================
+2. W_learned vs W_true: Model 049 Deep Dive
+======================================================================
+
+Basic Statistics:
+  n_edges: 434112
+  W_true:    mean=0.012590, std=0.290802
+  W_learned: mean=-0.020764, std=0.207311
+
+Correlation Analysis:
+  Pearson correlation: -0.1618
+  R²: -0.7520
+
+Sign Distribution:
+  W_true:    202855 positive,  84969 negative, 146288 near-zero
+  W_learned: 137806 positive, 208872 negative,  87434 near-zero
+
+Sign Flipping Analysis:
+  Positive true -> Positive learned:  22160 (10.9%)
+  Positive true -> Negative learned: 175743 (86.6%)
+  Negative true -> Negative learned:   6215 (7.3%)
+  Negative true -> Positive learned:  76721 (90.3%)
+
+Magnitude Distribution (W_true nonzero edges):
+  W_true magnitude:    mean=0.1191
+  W_learned magnitude: mean=0.1500
+  Ratio (learned/true): 1.2589
+
+======================================================================
+3. EFFECTIVE CONNECTIVITY Analysis
+======================================================================
+Testing if W_learned produces similar per-neuron input despite wrong edges
+
+Model 049:
+  Per-neuron incoming W (sum): Pearson=0.1975, R²=-0.1633
+  Per-neuron incoming |W| (sum): Pearson=0.5744
+
+Model 011:
+  Per-neuron incoming W (sum): Pearson=-0.0947, R²=-2.1406
+  Per-neuron incoming |W| (sum): Pearson=0.5562
+
+Model 041:
+  Per-neuron incoming W (sum): Pearson=-0.2507, R²=-1.9583
+  Per-neuron incoming |W| (sum): Pearson=0.6964
+
+Model 003:
+  Per-neuron incoming W (sum): Pearson=0.7477, R²=0.5340
+  Per-neuron incoming |W| (sum): Pearson=0.8345
+
+======================================================================
+4. PER-NEURON-TYPE W Recovery
+======================================================================
+
+Model 049: Worst 10 types by R²
+  Type   0: R²=-2.0085, n_edges=425802
+  Type   4: R²=+0.1335, n_edges=  598
+  Type   2: R²=+0.1336, n_edges=  698
+  Type   3: R²=+0.1382, n_edges=  648
+  Type  -4: R²=+0.1428, n_edges=  596
+  Type  -6: R²=+0.1433, n_edges=  910
+  Type   1: R²=+0.1453, n_edges=  748
+  Type  -2: R²=+0.1472, n_edges=  696
+  Type  -1: R²=+0.1482, n_edges=  746
+  Type  -5: R²=+0.1496, n_edges=  546
+
+Model 003: Worst 10 types by R²
+  Type  -6: R²=+0.4290, n_edges=  910
+  Type  -5: R²=+0.4302, n_edges=  546
+  Type   3: R²=+0.4303, n_edges=  648
+  Type   4: R²=+0.4303, n_edges=  598
+  Type  -2: R²=+0.4304, n_edges=  696
+  Type   2: R²=+0.4304, n_edges=  698
+  Type  -3: R²=+0.4305, n_edges=  646
+  Type  -4: R²=+0.4305, n_edges=  596
+  Type  -1: R²=+0.4305, n_edges=  746
+  Type   6: R²=+0.4306, n_edges=  930
+
+======================================================================
+5. TAU and V_REST: How are they computed?
+======================================================================
+
+In the FlyVis GNN, tau and V_rest are LEARNED parameters (not derived from W).
+The model learns them via the lin_phi MLP that maps to dv/dt.
+
+This explains the paradox: tau/V_rest can be correct even if W is wrong,
+because they are learned INDEPENDENTLY from W.
+
+Model 049 state dict keys: 14 total
+  lin_phi layers: 6
+  lin_edge layers: 6
+
+Model 011 state dict keys: 14 total
+  lin_phi layers: 6
+  lin_edge layers: 6
+
+Model 041 state dict keys: 14 total
+  lin_phi layers: 6
+  lin_edge layers: 6
+
+Model 003 state dict keys: 14 total
+  lin_phi layers: 6
+  lin_edge layers: 6
+
+======================================================================
+6. ACTIVITY RANK vs Learnability
+======================================================================
+
+Model activity ranks (from generation logs):
+Model    svd_99     activity_99  conn_R2     
+--------------------------------------------------
+049      19         16           0.124       
+011      45         26           0.681       
+041      6          5            0.911       
+003      60         35           0.965       
+
+Observation: Activity rank does NOT directly predict connectivity recovery!
+- Model 041 (svd_99=6, LOWEST) achieved conn_R2=0.911
+- Model 049 (svd_99=19, moderate) achieved conn_R2=0.124
+- Model 011 (svd_99=45, HIGH) achieved conn_R2=0.681
+- Model 003 (svd_99=60, HIGHEST) achieved conn_R2=0.965
+
+======================================================================
+7. W_TRUE Structure Comparison
+======================================================================
+Are the W_true matrices structurally different across models?
+
+Model 049:
+  W_true: min=-5.2514, max=2.2626
+  W_true std: 0.2908
+  Positive edges: 202855
+  Negative edges: 84969
+  Near-zero: 146288
+  |W| histogram: [np.int64(146288), np.int64(145759), np.int64(72383), np.int64(39782), np.int64(21305), np.int64(4272), np.int64(4323)]
+
+Model 011:
+  W_true: min=-5.8409, max=8.1318
+  W_true std: 0.3097
+  Positive edges: 160472
+  Negative edges: 102926
+  Near-zero: 170714
+  |W| histogram: [np.int64(170714), np.int64(136438), np.int64(57767), np.int64(36651), np.int64(24071), np.int64(6070), np.int64(2401)]
+
+Model 041:
+  W_true: min=-4.7135, max=8.5376
+  W_true std: 0.3310
+  Positive edges: 183601
+  Negative edges: 97569
+  Near-zero: 152942
+  |W| histogram: [np.int64(152942), np.int64(134176), np.int64(69097), np.int64(40260), np.int64(23935), np.int64(8966), np.int64(4736)]
+
+Model 003:
+  W_true: min=-4.2679, max=7.0684
+  W_true std: 0.2710
+  Positive edges: 175986
+  Negative edges: 101969
+  Near-zero: 156157
+  |W| histogram: [np.int64(156157), np.int64(138169), np.int64(59967), np.int64(42808), np.int64(27633), np.int64(5255), np.int64(4123)]
+
+======================================================================
+8. HYPOTHESIS: Degeneracy in Model 049
+======================================================================
+
+
+The Model 049 paradox suggests DEGENERACY: multiple W configurations
+can produce the same (or similar) dynamics given Model 049's activity pattern.
+
+Why this might happen:
+1. Low activity rank (svd_99=19) means the activity lies in a low-dimensional subspace
+2. Many edges may be INACTIVE (source neurons with zero activity)
+3. The effective rank of the W-activity product may be much lower than W's rank
+4. This creates a degenerate optimization landscape where many W solutions are equivalent
+
+To test this, we need to check:
+1. How many edges have INACTIVE source neurons?
+2. What is the rank of the W*activity product?
+
+Model 049:
+  Total edges: 434112
+  Edges with inactive source (var<1e-06): 0 (0.0%)
+  |W|-weighted inactive fraction: 0.0%
+  Correlation(source_var, edge_error): -0.0566
+
+Model 003:
+  Total edges: 434112
+  Edges with inactive source (var<1e-06): 0 (0.0%)
+  |W|-weighted inactive fraction: 0.0%
+  Correlation(source_var, edge_error): -0.0860
+
+======================================================================
+SUMMARY: Understanding the Failures
+======================================================================
+
+
+MODEL STATUS:
+  049: FAILING (conn_R2=0.124) - PARADOX: tau/V_rest correct but W wrong
+  011: PARTIAL (conn_R2=0.681) - lr_W=1E-3 helped, W_L1=3E-5 optimal
+  041: CONVERGED (conn_R2=0.911) - V_rest fundamentally limited
+  003: SOLVED (conn_R2=0.965) - edge_diff=900 optimal
+
+KEY INSIGHT FOR MODEL 049:
+  The paradox (correct tau/V_rest, wrong W) suggests that:
+  1. tau and V_rest are learned INDEPENDENTLY from W
+  2. Model 049's low-rank activity creates DEGENERACY in W
+  3. Multiple W configurations can produce similar dynamics
+  4. The optimizer finds a local minimum with wrong W but correct dynamics
+
+NEXT STEPS FOR MODEL 049:
+  1. Try MUCH stronger W_L1 regularization (1E-4 or 5E-4) to constrain W
+  2. Try reducing hidden_dim to limit model capacity
+  3. Try recurrent training to force W to matter for dynamics
+  4. Accept that this model may have fundamental W degeneracy
+
+
+======================================================================
+END OF ANALYSIS
+======================================================================

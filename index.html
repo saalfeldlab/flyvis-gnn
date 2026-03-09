@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.26">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Graph Neural Networks Recover Interpretable Circuit Models from Neural Activity – FlyVis-GNN</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-listing/list.min.js"></script>
+<script src="site_libs/quarto-listing/quarto-listing.js"></script>
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-b758ccaa5987ceb1b75504551e579abf.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-ad315e24270f67b08a0f8459c6f8e008.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-8c78c9ad8850e3c17dde644b4d7d0b0a.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-ad315e24270f67b08a0f8459c6f8e008.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script>
+
+  window.document.addEventListener("DOMContentLoaded", function (_event) {
+    const listingTargetEl = window.document.querySelector('#listing-listing .list');
+    if (!listingTargetEl) {
+      // No listing discovered, do not attach.
+      return; 
+    }
+
+    const options = {
+      valueNames: ['listing-image','listing-title','listing-description','listing-categories','listing-filename',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-file-modified-sort'] }],
+      
+      searchColumns: ["listing-title","listing-author","listing-image","listing-description","listing-categories"],
+    };
+
+    window['quarto-listings'] = window['quarto-listings'] || {};
+    window['quarto-listings']['listing-listing'] = new List('listing-listing', options);
+
+    if (window['quarto-listing-loaded']) {
+      window['quarto-listing-loaded']();
+    }
+  });
+
+  window.addEventListener('hashchange',() => {
+    if (window['quarto-listing-loaded']) {
+      window['quarto-listing-loaded']();
+    }
+  })
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+    const toggleBodyColorMode = (bsSheetEl) => {
+      const mode = bsSheetEl.getAttribute("data-mode");
+      const bodyEl = window.document.querySelector("body");
+      if (mode === "dark") {
+        bodyEl.classList.add("quarto-dark");
+        bodyEl.classList.remove("quarto-light");
+      } else {
+        bodyEl.classList.add("quarto-light");
+        bodyEl.classList.remove("quarto-dark");
+      }
+    }
+    const toggleBodyColorPrimary = () => {
+      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
+      if (bsSheetEl) {
+        toggleBodyColorMode(bsSheetEl);
+      }
+    }
+    const setColorSchemeToggle = (alternate) => {
+      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+      for (let i=0; i < toggles.length; i++) {
+        const toggle = toggles[i];
+        if (toggle) {
+          if (alternate) {
+            toggle.classList.add("alternate");
+          } else {
+            toggle.classList.remove("alternate");
+          }
+        }
+      }
+    };
+    const toggleColorMode = (alternate) => {
+      // Switch the stylesheets
+      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
+      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+      manageTransitions('#quarto-margin-sidebar .nav-link', false);
+      if (alternate) {
+        // note: dark is layered on light, we don't disable primary!
+        enableStylesheet(alternateStylesheets);
+        for (const sheetNode of alternateStylesheets) {
+          if (sheetNode.id === "quarto-bootstrap") {
+            toggleBodyColorMode(sheetNode);
+          }
+        }
+      } else {
+        disableStylesheet(alternateStylesheets);
+        enableStylesheet(primaryStylesheets)
+        toggleBodyColorPrimary();
+      }
+      manageTransitions('#quarto-margin-sidebar .nav-link', true);
+      // Switch the toggles
+      setColorSchemeToggle(alternate)
+      // Hack to workaround the fact that safari doesn't
+      // properly recolor the scrollbar when toggling (#1455)
+      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+        manageTransitions("body", false);
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          manageTransitions("body", true);
+        }, 40);
+      }
+    }
+    const disableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        stylesheet.rel = 'disabled-stylesheet';
+      }
+    }
+    const enableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
+          stylesheet.rel = 'stylesheet';
+        }
+      }
+    }
+    const manageTransitions = (selector, allowTransitions) => {
+      const els = window.document.querySelectorAll(selector);
+      for (let i=0; i < els.length; i++) {
+        const el = els[i];
+        if (allowTransitions) {
+          el.classList.remove('notransition');
+        } else {
+          el.classList.add('notransition');
+        }
+      }
+    }
+    const isFileUrl = () => {
+      return window.location.protocol === 'file:';
+    }
+    const hasAlternateSentinel = () => {
+      let styleSentinel = getColorSchemeSentinel();
+      if (styleSentinel !== null) {
+        return styleSentinel === "alternate";
+      } else {
+        return false;
+      }
+    }
+    const setStyleSentinel = (alternate) => {
+      const value = alternate ? "alternate" : "default";
+      if (!isFileUrl()) {
+        window.localStorage.setItem("quarto-color-scheme", value);
+      } else {
+        localAlternateSentinel = value;
+      }
+    }
+    const getColorSchemeSentinel = () => {
+      if (!isFileUrl()) {
+        const storageValue = window.localStorage.getItem("quarto-color-scheme");
+        return storageValue != null ? storageValue : localAlternateSentinel;
+      } else {
+        return localAlternateSentinel;
+      }
+    }
+    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+      let newTheme = '';
+      if(authorPrefersDark) {
+        newTheme = isAlternate ? baseTheme : alternateTheme;
+      } else {
+        newTheme = isAlternate ? alternateTheme : baseTheme;
+      }
+      const changeGiscusTheme = () => {
+        // From: https://github.com/giscus/giscus/issues/336
+        const sendMessage = (message) => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          if (!iframe) return;
+          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+        }
+        sendMessage({
+          setConfig: {
+            theme: newTheme
+          }
+        });
+      }
+      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+      if (isGiscussLoaded) {
+        changeGiscusTheme();
+      }
+    };
+    const authorPrefersDark = false;
+    const darkModeDefault = authorPrefersDark;
+      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+    // Dark / light mode switch
+    window.quartoToggleColorScheme = () => {
+      // Read the current dark / light value
+      let toAlternate = !hasAlternateSentinel();
+      toggleColorMode(toAlternate);
+      setStyleSentinel(toAlternate);
+      toggleGiscusIfUsed(toAlternate, darkModeDefault);
+      window.dispatchEvent(new Event('resize'));
+    };
+    // Switch to dark mode if need be
+    if (hasAlternateSentinel()) {
+      toggleColorMode(true);
+    } else {
+      toggleColorMode(false);
+    }
+  </script>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">FlyVis-GNN</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+    <a href="https://github.com/allierc/flyvis-gnn" title="" class="quarto-navigation-tool px-1" aria-label=""><i class="bi bi-github"></i></a>
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#simulation" id="toc-simulation" class="nav-link active" data-scroll-target="#simulation">Simulation</a></li>
+  <li><a href="#graph-neural-network-model" id="toc-graph-neural-network-model" class="nav-link" data-scroll-target="#graph-neural-network-model">Graph neural network model</a></li>
+  <li><a href="#experiments" id="toc-experiments" class="nav-link" data-scroll-target="#experiments">Experiments</a></li>
+  <li><a href="#agentic-hyper-parameter-optimization" id="toc-agentic-hyper-parameter-optimization" class="nav-link" data-scroll-target="#agentic-hyper-parameter-optimization">Agentic hyper-parameter optimization</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/allierc/flyvis-gnn/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li></ul></div></nav>
+    <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(10)</span></div><div class="category" data-category="QWJsYXRpb24=">Ablation <span class="quarto-category-count">(1)</span></div><div class="category" data-category="QWdlbnRpYyUyME9wdGltaXphdGlvbg==">Agentic Optimization <span class="quarto-category-count">(1)</span></div><div class="category" data-category="QW5hbHlzaXM=">Analysis <span class="quarto-category-count">(1)</span></div><div class="category" data-category="RGF0YSUyMEdlbmVyYXRpb24=">Data Generation <span class="quarto-category-count">(1)</span></div><div class="category" data-category="RWRnZSUyMFJlbW92YWw=">Edge Removal <span class="quarto-category-count">(1)</span></div><div class="category" data-category="Rmx5Vmlz">FlyVis <span class="quarto-category-count">(10)</span></div><div class="category" data-category="R05O">GNN <span class="quarto-category-count">(9)</span></div><div class="category" data-category="SWRlbnRpZmlhYmlsaXR5">Identifiability <span class="quarto-category-count">(1)</span></div><div class="category" data-category="SU5S">INR <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TWVhc3VyZW1lbnQlMjBOb2lzZQ==">Measurement Noise <span class="quarto-category-count">(1)</span></div><div class="category" data-category="TnVsbCUyMEVkZ2Vz">Null Edges <span class="quarto-category-count">(1)</span></div><div class="category" data-category="U2ltdWxhdGlvbg==">Simulation <span class="quarto-category-count">(1)</span></div><div class="category" data-category="U0lSRU4=">SIREN <span class="quarto-category-count">(1)</span></div><div class="category" data-category="VGVzdGluZw==">Testing <span class="quarto-category-count">(1)</span></div><div class="category" data-category="VHJhaW5pbmc=">Training <span class="quarto-category-count">(1)</span></div></div></div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">Graph Neural Networks Recover Interpretable Circuit Models from Neural Activity</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source" data-quarto-source-url="https://github.com/allierc/flyvis-gnn"><i class="bi"></i> Code</button></div></div>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div style="text-align: center; margin-bottom: 1.5em;">
+<p style="font-size: 1.1em; margin-bottom: 0.3em;">
+Cédric Allier<sup>1</sup>, Janne K. Lappalainen<sup>2</sup>, Stephan Saalfeld<sup>1</sup>
+</p>
+<p style="font-size: 0.85em; color: #555;">
+<sup>1</sup>Janelia Research Campus, Howard Hughes Medical Institute, Ashburn, VA 20147, USA   <sup>2</sup>Allen Institute, Seattle
+</p>
+</div>
+<p>Synapse-level connectomes describe the structure of circuits, but not the electrical and chemical dynamics. Conversely, large-scale recordings of neural activity capture these dynamics, but not the circuit structure. We asked whether combining binary connectivity and recorded neural activity can be used to infer mechanistic models of neural circuits. We trained a graph neural network (GNN) [6] (<a href="https://saalfeldlab.github.io/neural-gnn/">neural-gnn</a>) to forecast the activity of <em>Drosophila</em> visual system simulations. Trained on activity trajectories in response to visual inputs, the model recovered effective connectivity weights, neuron types, and nonlinear activation functions. Moreover, it correctly predicted causal effects of connection removal, demonstrating the ability to infer mechanistic dependencies. Our simple, flexible, and interpretable method recovered both structure and dynamics from neural activity.</p>
+<section id="simulation" class="level3">
+<h3 class="anchored" data-anchor-id="simulation">Simulation</h3>
+<p>We simulated neural activity in the <em>Drosophila</em> visual system using <a href="https://github.com/TuragaLab/flyvis"><em>flyvis</em></a>’ pretrained models [1] (<a href="./Notebook_00.html">Notebook 00</a>). The recurrent neural network contained <span class="math inline">\(13{,}741\)</span> neurons from <span class="math inline">\(65\)</span> cell types and <span class="math inline">\(434{,}122\)</span> synaptic connections, corresponding to real neurons and their synapses. Each neuron was modeled as a non-spiking compartment governed by</p>
+<p><span class="math display">\[\tau_i\frac{dv_i(t)}{dt} = -v_i(t) + V_i^{\text{rest}} + \sum_{j\in\mathcal{N}_i} \mathbf{W}_{ij}\,\text{ReLU}\!\big(v_j(t)\big) + I_i(t) + \sigma\,\xi_i(t)\]</span></p>
+<p>where <span class="math inline">\(\tau_i\)</span> and <span class="math inline">\(V_i^{\text{rest}}\)</span> are cell-type parameters, <span class="math inline">\(\mathbf{W}_{ij}\)</span> is the connectome-constrained synaptic weight, <span class="math inline">\(I_i(t)\)</span> the visual input, and <span class="math inline">\(\sigma\,\xi_i(t)\)</span> is intrinsic noise (<span class="math inline">\(\xi_i \sim \mathcal{N}(0,1)\)</span>) modeling e.g.&nbsp;channel noise or synaptic variability. We restricted the original system of <span class="math inline">\(721\)</span> retinotopic columns to the central subset of <span class="math inline">\(217\)</span> columns.</p>
+</section>
+<section id="graph-neural-network-model" class="level3">
+<h3 class="anchored" data-anchor-id="graph-neural-network-model">Graph neural network model</h3>
+<p>We approximated the simulated voltage dynamics by a message-passing GNN [2] (<a href="./Notebook_01.html">Notebook 01</a>)</p>
+<p><span class="math display">\[\frac{\widehat{dv}_i(t)}{dt} = f_\theta\!\left(v_i(t),\,\mathbf{a}_i,\,\sum_{j\in\mathcal{N}_i} \widehat{\mathbf{W}}_{ij}\,g_\phi\!\big(v_j(t),\,\mathbf{a}_j\big)^2,\,I_i(t)\right)\]</span></p>
+<p>Nodes of the GNN corresponded to neurons and edges to functional synaptic connections. The GNN learned a latent embedding <span class="math inline">\(\mathbf{a}_i \in \mathbb{R}^2\)</span> for each neuron <span class="math inline">\(i\)</span>, giving each neuron a compact latent identity to capture cell-type specific properties (like time constants and nonlinearities). Neuron update <span class="math inline">\(f_\theta = \text{MLP}_0\)</span> and edge message <span class="math inline">\(g_\phi = \text{MLP}_1\)</span> are three-layer perceptrons (width <span class="math inline">\(64\)</span>, ReLU, linear output). <span class="math inline">\(g_\phi\)</span> mapped presynaptic inputs <span class="math inline">\(v_j\)</span> to nonnegative messages (via squaring) depending on neural embedding <span class="math inline">\(\mathbf{a}_j\)</span>, which are weighted by <span class="math inline">\(\widehat{\mathbf{W}}_{ij}\)</span>. <span class="math inline">\(f_\theta\)</span> processed the postsynaptic voltage <span class="math inline">\(v_i\)</span>, aggregated input, and external input <span class="math inline">\(I_i(t)\)</span> to predict <span class="math inline">\(\widehat{dv}_i(t)/dt\)</span>, depending on neural embedding <span class="math inline">\(\mathbf{a}_i\)</span>. During training, inputs <span class="math inline">\(I_i(t)\)</span>, adjacency <span class="math inline">\(\mathcal{N}_i\)</span>, and activity <span class="math inline">\(v_i(t)\)</span> are given. The MLPs, <span class="math inline">\(\widehat{\mathbf{W}}_{ij}\)</span>, and <span class="math inline">\(\mathbf{a}_i\)</span> are optimized by minimizing <span class="math inline">\(\mathcal{L}_{\text{pred}} = \sum_{i,t} \| \widehat{y}_i(t) - y_i(t) \|_2\)</span> between simulator <span class="math inline">\(y_i(t) = dv_i(t)/dt\)</span> and GNN predictions <span class="math inline">\(\widehat{y}_i(t) = \widehat{dv}_i(t)/dt\)</span>. The objective was augmented with sparsity, monotonicity, and normalization regularizers (<a href="./Notebook_01.html">Notebook 01</a>). By replacing the known stimulus <span class="math inline">\(I_i(t)\)</span> with a SIREN implicit neural representation that maps coordinates <span class="math inline">\((t, x, y)\)</span> to the stimulus field, we further learned the visual input itself (<a href="./Notebook_05.html">Notebook 05</a>).</p>
+</section>
+<section id="experiments" class="level3">
+<h3 class="anchored" data-anchor-id="experiments">Experiments</h3>
+<p>We trained and evaluated across three intrinsic noise regimes: deterministic (<span class="math inline">\(\sigma=0\)</span>), low (<span class="math inline">\(\sigma=0.05\)</span>), and high (<span class="math inline">\(\sigma=0.5\)</span>). Each model was tested on held-out visual stimuli. Models were also evaluated on noise-free test data to verify that they recovered the deterministic dynamics (<a href="./Notebook_02.html">Notebook 02</a>). We probed <em>causal invariance</em> by pruning 50% of the connections in a new simulation, asking whether a GNN trained on the original network could predict the outcome of such structural perturbation (<a href="./Notebook_03.html">Notebook 03</a>). Post-training analysis (<a href="./Notebook_04.html">Notebook 04</a>) showed that the GNN recovered the <span class="math inline">\(434{,}122\)</span> synaptic weights <span class="math inline">\(W_{ij}\)</span>, the time constants <span class="math inline">\(\tau_i\)</span> and resting potentials <span class="math inline">\(V_i^{\text{rest}}\)</span> and the neuron-type identity (the latent embeddings <span class="math inline">\(\mathbf{a}_i\)</span> cluster by cell type without supervision). Noise proved a stronger lever than any single hyperparameter: at <span class="math inline">\(\sigma=0.5\)</span> the GNN achieved near-perfect recovery (<span class="math inline">\(R^2_W=0.99\)</span>, <span class="math inline">\(R^2_\tau=1.00\)</span>, <span class="math inline">\(R^2_{V^{\text{rest}}}=0.98\)</span>, clustering accuracy <span class="math inline">\(=0.91\)</span>). When the SIREN replaced the known stimulus, the joint GNN+SIREN model recovered the visual input sequence (<span class="math inline">\({\sim}10^8\)</span> values, <a href="./Notebook_05.html">Notebook 05</a>). To test robustness to false positives in the connectome, we augmented the adjacency matrix with 100%, 200%, and 400% extra random null edges and showed that the GNN still recovers the true synaptic structure (<a href="./Notebook_06.html">Notebook 06</a>). Conversely, to test robustness to false negatives, we removed 2%, 5%, 10%, and 20% of edges from the connectome and evaluated recovery on the incomplete graph (<a href="./Notebook_07.html">Notebook 07</a>).</p>
+</section>
+<section id="agentic-hyper-parameter-optimization" class="level3">
+<h3 class="anchored" data-anchor-id="agentic-hyper-parameter-optimization">Agentic hyper-parameter optimization</h3>
+<p>The inverse problem is <strong>ill-posed</strong>: recovering five coupled components (<span class="math inline">\(\widehat{W}\)</span>, <span class="math inline">\(\tau\)</span>, <span class="math inline">\(V^{\text{rest}}\)</span>, <span class="math inline">\(f_\theta\)</span>, <span class="math inline">\(g_\phi\)</span>) from voltage traces alone is under-determined, and many parameter combinations produce indistinguishable predictions. The combined space of architecture, regularization, and training hyperparameters (~20 coupled parameters) is too large to explore exhaustively. We optimized these hyperparameters with Claude Code in the loop (<a href="./Notebook_09.html">Notebook 08</a>). In each iteration, the agent interpreted, compared, and summarized previous experiments into a structured research summary, then created, recorded, and executed a hypothesis for the next experiment. The target was both <strong>recovery precision</strong> (how accurately the GNN recovers the true circuit parameters) and <strong>identifiability</strong> (how consistently it does so across different random seeds).</p>
+</section>
+<section id="references" class="level3" style="font-size: 0.8em;">
+<h3 class="anchored" data-anchor-id="references">References</h3>
+<p>[1] J. K. Lappalainen et al., “Connectome-constrained networks predict neural activity across the fly visual system,” <em>Nature</em>, 2024. <a href="https://doi.org/10.1038/s41586-024-07939-3">doi:10.1038/s41586-024-07939-3</a></p>
+<p>[2] J. Gilmer et al., “Neural Message Passing for Quantum Chemistry,” 2017. <a href="https://doi.org/10.48550/arXiv.1704.01212">doi:10.48550/arXiv.1704.01212</a></p>
+<p>[3] L. Mi et al., “Connectome-constrained Latent Variable Model of Whole-Brain Neural Activity,” <em>ICLR</em>, 2021.</p>
+<p>[4] D. A. Pospisil et al., “The fly connectome reveals a path to the effectome,” <em>Nature</em> 634, 2024. <a href="https://doi.org/10.1038/s41586-024-07982-0">doi:10.1038/s41586-024-07982-0</a></p>
+<p>[5] E. Y. Wang et al., “Foundation model of neural activity predicts response to new stimulus types,” <em>Nature</em> 640, 2025. <a href="https://doi.org/10.1038/s41586-025-08829-y">doi:10.1038/s41586-025-08829-y</a></p>
+<p>[6] C. Allier, L. Heinrich, M. Schneider, S. Saalfeld, “Graph neural networks uncover structure and functions underlying the activity of simulated neural assemblies,” <em>arXiv:2602.13325</em>, 2026. <a href="https://doi.org/10.48550/arXiv.2602.13325">doi:10.48550/arXiv.2602.13325</a></p>
+</section>
+
+
+
+
+<div class="quarto-listing quarto-listing-container-default" id="listing-listing">
+<div class="listing-actions-group">
+   <div class="input-group input-group-sm quarto-listing-sort">
+    <span class="input-group-text"><i class="bi bi-sort-down"></i></span>
+    <select id="listing-listing-sort" class="form-select" aria-label="Order By" onchange="window['quarto-listings']['listing-listing'].sort(this.options[this.selectedIndex].value, { order: this.options[this.selectedIndex].getAttribute('data-direction')})">
+      <option value="" disabled="" selected="" hidden="">Order By</option>
+      <option value="index" data-direction="asc">Default</option>
+      <option value="listing-title" data-direction="asc">
+        Title
+      </option>
+    </select>
+  </div>
+    <div class="input-group input-group-sm quarto-listing-filter">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input type="text" class="search form-control" placeholder="Filter">
+    </div>
+</div>
+<div class="list quarto-listing-default">
+<div class="quarto-post image-left" data-index="0" data-categories="Rmx5VmlzJTJDU2ltdWxhdGlvbiUyQ0RhdGElMjBHZW5lcmF0aW9u" data-listing-file-modified-sort="1773163344791" data-listing-reading-time-sort="8" data-listing-word-count-sort="1523">
+<div class="thumbnail"><a href="./Notebook_00.html" class="no-external">
+
+<img loading="lazy" src="./graphs_data/fly/flyvis_noise_free/activity_traces.png" class="thumbnail-image">
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./Notebook_00.html" class="no-external">Data Generation: Drosophila Visual System</a>
+</h3>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('Rmx5Vmlz'); return false;">FlyVis</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('U2ltdWxhdGlvbg=='); return false;">Simulation</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('RGF0YSUyMEdlbmVyYXRpb24='); return false;">Data Generation</div>
+
+</div>
+<div class="delink listing-description"><a href="./Notebook_00.html" class="no-external">
+<p>Simulate the Drosophila visual system with 13,741 neurons across 65 cell types at three intrinsic noise levels (<span class="math inline">\(\sigma = 0\)</span>, <span class="math inline">\(0.05\)</span>, <span class="math inline">\(0.5\)</span>) and generate voltage traces for GNN training and testing.</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./Notebook_00.html" class="no-external">
+<div class="metadata-value listing-filename">
+Notebook_00.py
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-left" data-index="1" data-categories="Rmx5VmlzJTJDR05OJTJDVHJhaW5pbmc=" data-listing-file-modified-sort="1773107751407" data-listing-reading-time-sort="7" data-listing-word-count-sort="1363">
+<div class="thumbnail"><a href="./Notebook_01.html" class="no-external">
+
+<img loading="lazy" src="./log/fly/flyvis_noise_free/tmp_training/loss_log.png" class="thumbnail-image">
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./Notebook_01.html" class="no-external">GNN Training: Learning Circuit Dynamics</a>
+</h3>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('Rmx5Vmlz'); return false;">FlyVis</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('R05O'); return false;">GNN</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('VHJhaW5pbmc='); return false;">Training</div>
+
+</div>
+<div class="delink listing-description"><a href="./Notebook_01.html" class="no-external">
+<p>Train a message-passing GNN to approximate the circuit dynamics from voltage traces alone, learning synaptic weights, neuron embeddings, and nonlinear activation functions at each noise level.</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./Notebook_01.html" class="no-external">
+<div class="metadata-value listing-filename">
+Notebook_01.py
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-left" data-index="2" data-categories="Rmx5VmlzJTJDR05OJTJDVGVzdGluZw==" data-listing-file-modified-sort="1772989554668" data-listing-reading-time-sort="9" data-listing-word-count-sort="1726">
+<div class="thumbnail"><a href="./Notebook_02.html" class="no-external">
+
+<img loading="lazy" src="./log/fly/flyvis_noise_free/results/rollout_noise_free_DAVIS_selected.png" class="thumbnail-image">
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./Notebook_02.html" class="no-external">GNN Testing: Evaluating Learned Dynamics</a>
+</h3>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('Rmx5Vmlz'); return false;">FlyVis</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('R05O'); return false;">GNN</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('VGVzdGluZw=='); return false;">Testing</div>
+
+</div>
+<div class="delink listing-description"><a href="./Notebook_02.html" class="no-external">
+<p>Evaluate the trained GNN on held-out test stimuli never seen during training, comparing one-step predictions and multi-step rollouts against the ground-truth simulator trajectories.</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./Notebook_02.html" class="no-external">
+<div class="metadata-value listing-filename">
+Notebook_02.py
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-left" data-index="3" data-categories="Rmx5VmlzJTJDR05OJTJDQWJsYXRpb24=" data-listing-file-modified-sort="1772740339473" data-listing-reading-time-sort="10" data-listing-word-count-sort="1922">
+<div class="thumbnail"><a href="./Notebook_03.html" class="no-external">
+
+<img loading="lazy" src="./log/fly/flyvis_noise_free/results/rollout_noise_free_DAVIS_selected_on_noise_free_mask_50.png" class="thumbnail-image">
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./Notebook_03.html" class="no-external">GNN Testing: Robustness to Edge Removal</a>
+</h3>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('Rmx5Vmlz'); return false;">FlyVis</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('R05O'); return false;">GNN</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('QWJsYXRpb24='); return false;">Ablation</div>
+
+</div>
+<div class="delink listing-description"><a href="./Notebook_03.html" class="no-external">
+<p>Test whether the GNN has learned the circuit’s computational rules by randomly ablating 50% of synaptic connections and comparing the model’s predictions to the simulator under the same reduced connectivity.</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./Notebook_03.html" class="no-external">
+<div class="metadata-value listing-filename">
+Notebook_03.py
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-left" data-index="4" data-categories="Rmx5VmlzJTJDR05OJTJDQW5hbHlzaXM=" data-listing-file-modified-sort="1773107107493" data-listing-reading-time-sort="10" data-listing-word-count-sort="1912">
+<div class="thumbnail"><a href="./Notebook_04.html" class="no-external">
+
+<img loading="lazy" src="./log/fly/flyvis_noise_05/results/MLP0_noise_05_domain.png" class="thumbnail-image">
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./Notebook_04.html" class="no-external">GNN Results: Connectivity Recovery and Learned Representations</a>
+</h3>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('Rmx5Vmlz'); return false;">FlyVis</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('R05O'); return false;">GNN</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('QW5hbHlzaXM='); return false;">Analysis</div>
+
+</div>
+<div class="delink listing-description"><a href="./Notebook_04.html" class="no-external">
+<p>Extract and compare the learned synaptic weights, time constants, resting potentials, neuron-type embeddings, and MLP functions against the ground-truth simulator parameters across noise conditions.</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./Notebook_04.html" class="no-external">
+<div class="metadata-value listing-filename">
+Notebook_04.py
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-left" data-index="5" data-categories="Rmx5VmlzJTJDR05OJTJDSU5SJTJDU0lSRU4=" data-listing-file-modified-sort="1773146550778" data-listing-reading-time-sort="8" data-listing-word-count-sort="1573">
+<div class="thumbnail"><a href="./Notebook_05.html" class="no-external">
+
+<img loading="lazy" src="./log/fly/flyvis_noise_005_INR/results/weights_comparison_corrected.png" class="thumbnail-image">
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./Notebook_05.html" class="no-external">GNN + INR: Joint Stimulus and Dynamics Recovery</a>
+</h3>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('Rmx5Vmlz'); return false;">FlyVis</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('R05O'); return false;">GNN</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('SU5S'); return false;">INR</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('U0lSRU4='); return false;">SIREN</div>
+
+</div>
+<div class="delink listing-description"><a href="./Notebook_05.html" class="no-external">
+<p>Train a SIREN implicit neural representation (INR) jointly with the GNN to recover the visual stimulus field from neural activity alone. Discuss the inherent scale/offset degeneracy and the corrected R².</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./Notebook_05.html" class="no-external">
+<div class="metadata-value listing-filename">
+Notebook_05.py
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-left" data-index="6" data-categories="Rmx5VmlzJTJDR05OJTJDTnVsbCUyMEVkZ2Vz" data-listing-file-modified-sort="1773146334537" data-listing-reading-time-sort="10" data-listing-word-count-sort="1908">
+<div class="thumbnail"><a href="./Notebook_06.html" class="no-external">
+
+<img loading="lazy" src="./log/fly/flyvis_noise_005_null_edges_200/results/weights_comparison_corrected.png" class="thumbnail-image">
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./Notebook_06.html" class="no-external">Robustness to Extra Null Edges</a>
+</h3>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('Rmx5Vmlz'); return false;">FlyVis</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('R05O'); return false;">GNN</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('TnVsbCUyMEVkZ2Vz'); return false;">Null Edges</div>
+
+</div>
+<div class="delink listing-description"><a href="./Notebook_06.html" class="no-external">
+<p>Train the GNN with 100%, 200%, and 400% extra random null edges appended to the true connectome. Evaluate whether the model can still recover synaptic weights, biophysical parameters, and neuron-type identity despite the corrupted adjacency matrix.</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./Notebook_06.html" class="no-external">
+<div class="metadata-value listing-filename">
+Notebook_06.py
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-left" data-index="7" data-categories="Rmx5VmlzJTJDR05OJTJDRWRnZSUyMFJlbW92YWw=" data-listing-file-modified-sort="1773146351848" data-listing-reading-time-sort="10" data-listing-word-count-sort="1897">
+<div class="thumbnail"><a href="./Notebook_07.html" class="no-external">
+
+<img loading="lazy" src="./log/fly/flyvis_noise_005_removed_pc_05/results/weights_comparison_corrected.png" class="thumbnail-image">
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./Notebook_07.html" class="no-external">Robustness to Edge Removal</a>
+</h3>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('Rmx5Vmlz'); return false;">FlyVis</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('R05O'); return false;">GNN</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('RWRnZSUyMFJlbW92YWw='); return false;">Edge Removal</div>
+
+</div>
+<div class="delink listing-description"><a href="./Notebook_07.html" class="no-external">
+<p>Train the GNN on incomplete connectomes where 2%, 5%, 10%, and 20% of edges have been removed. Evaluate whether the model can still recover synaptic weights, biophysical parameters, and neuron-type identity despite missing connections.</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./Notebook_07.html" class="no-external">
+<div class="metadata-value listing-filename">
+Notebook_07.py
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-left" data-index="8" data-categories="Rmx5VmlzJTJDR05OJTJDTWVhc3VyZW1lbnQlMjBOb2lzZQ==" data-listing-file-modified-sort="1773163304779" data-listing-reading-time-sort="9" data-listing-word-count-sort="1695">
+<div class="thumbnail"><a href="./Notebook_08.html" class="no-external">
+
+<img loading="lazy" src="./graphs_data/fly/flyvis_noise_005_010/activity_traces_noisy.png" class="thumbnail-image">
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./Notebook_08.html" class="no-external">Robustness to Measurement Noise</a>
+</h3>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('Rmx5Vmlz'); return false;">FlyVis</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('R05O'); return false;">GNN</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('TWVhc3VyZW1lbnQlMjBOb2lzZQ=='); return false;">Measurement Noise</div>
+
+</div>
+<div class="delink listing-description"><a href="./Notebook_08.html" class="no-external">
+<p>Train the GNN on voltage observations corrupted by additive Gaussian measurement noise at five levels. Evaluate whether the model can still recover synaptic weights, biophysical parameters, and neuron-type identity from noisy observations.</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./Notebook_08.html" class="no-external">
+<div class="metadata-value listing-filename">
+Notebook_08.py
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-left" data-index="9" data-categories="Rmx5VmlzJTJDR05OJTJDQWdlbnRpYyUyME9wdGltaXphdGlvbiUyQ0lkZW50aWZpYWJpbGl0eQ==" data-listing-file-modified-sort="1773091096541" data-listing-reading-time-sort="6" data-listing-word-count-sort="1046">
+<div class="thumbnail"><a href="./Notebook_09.html" class="no-external">
+
+<img loading="lazy" src="./assets/Fig_agentic_loop.svg" class="thumbnail-image">
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./Notebook_09.html" class="no-external">Agentic Hyper-Parameter Optimization: Addressing Identifiability</a>
+</h3>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('Rmx5Vmlz'); return false;">FlyVis</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('R05O'); return false;">GNN</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('QWdlbnRpYyUyME9wdGltaXphdGlvbg=='); return false;">Agentic Optimization</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('SWRlbnRpZmlhYmlsaXR5'); return false;">Identifiability</div>
+
+</div>
+<div class="delink listing-description"><a href="./Notebook_09.html" class="no-external">
+<p>Agentic hyper-parameter optimization addresses the ill-posedness of circuit recovery across three noise regimes, discovering that identifiability fails for different reasons at each level and finding distinct solutions through hypothesis-driven reasoning.</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./Notebook_09.html" class="no-external">
+<div class="metadata-value listing-filename">
+Notebook_09.py
+</div>
+</a>
+</div>
+</div>
+</div>
+<div class="listing-no-matching d-none">No matching items</div>
+</div></main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    // Ensure there is a toggle, if there isn't float one in the top right
+    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+      const a = window.document.createElement('a');
+      a.classList.add('top-right');
+      a.classList.add('quarto-color-scheme-toggle');
+      a.href = "";
+      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+      const i = window.document.createElement("i");
+      i.classList.add('bi');
+      a.appendChild(i);
+      window.document.body.appendChild(a);
+    }
+    setColorSchemeToggle(hasAlternateSentinel())
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/allierc\.github\.io\/flyvis-gnn\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p>Copyright 2026, Saalfeld Lab — Part of the text was generated by Claude and reviewed by C. Allier</p>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/allierc/flyvis-gnn/blob/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li></ul></div></div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

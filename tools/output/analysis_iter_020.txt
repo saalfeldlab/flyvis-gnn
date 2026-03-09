@@ -1,0 +1,189 @@
+======================================================================
+UNDERSTANDING EXPLORATION: Batch 5 Analysis (Iterations 17-20)
+Focus: Why Model 049 has FUNDAMENTAL LIMITATION
+======================================================================
+======================================================================
+ANALYSIS 1: Activity Rank vs Connectivity Recoverability
+======================================================================
+
+Model | svd_rank_99 | Best conn_R2 | Status
+-------------------------------------------------------
+  049 |      19     |    0.634    | PARTIAL
+  011 |      45     |    0.716    | PARTIAL
+  041 |       6     |    0.912    | SOLVED
+  003 |      60     |    0.972    | SOLVED
+
+**Key observation**: No simple correlation between activity rank and recoverability!
+- Model 041 (rank=6, LOWEST) achieved 0.912 (SOLVED)
+- Model 049 (rank=19, low) achieved 0.634 only (FAILED to improve)
+- Model 011 (rank=45, high) achieved 0.716 (PARTIAL)
+- Model 003 (rank=60, HIGHEST) achieved 0.972 (SOLVED)
+
+======================================================================
+ANALYSIS 2: W_true Structural Differences
+======================================================================
+
+Model 049:
+  Non-zero edges: 422108 / 434112 (97.2%)
+  Positive: 273523 (63.0%), sum=20068.16
+  Negative: 148585 (34.2%), sum=-14602.66
+  Net balance: 5465.49
+  |W| distribution: weak(<0.01)=145905, medium(0.01-0.1)=218525, strong(>0.1)=69682
+  W stats: mean=0.012590, std=0.2908, max=2.2626, min=-5.2514
+
+Model 011:
+  Non-zero edges: 416216 / 434112 (95.9%)
+  Positive: 267564 (61.6%), sum=16996.59
+  Negative: 148652 (34.2%), sum=-15314.76
+  Net balance: 1681.83
+  |W| distribution: weak(<0.01)=170331, medium(0.01-0.1)=194588, strong(>0.1)=69193
+  W stats: mean=0.003874, std=0.3097, max=8.1318, min=-5.8409
+
+Model 041:
+  Non-zero edges: 427272 / 434112 (98.4%)
+  Positive: 280655 (64.7%), sum=22333.50
+  Negative: 146617 (33.8%), sum=-16720.54
+  Net balance: 5612.96
+  |W| distribution: weak(<0.01)=152559, medium(0.01-0.1)=203656, strong(>0.1)=77897
+  W stats: mean=0.012930, std=0.3310, max=8.5376, min=-4.7135
+
+Model 003:
+  Non-zero edges: 415330 / 434112 (95.7%)
+  Positive: 264372 (60.9%), sum=18872.53
+  Negative: 150958 (34.8%), sum=-15865.49
+  Net balance: 3007.04
+  |W| distribution: weak(<0.01)=155774, medium(0.01-0.1)=198519, strong(>0.1)=79819
+  W stats: mean=0.006927, std=0.2710, max=7.0684, min=-4.2679
+
+======================================================================
+ANALYSIS 3: Per-Neuron Effective Connectivity
+======================================================================
+
+Model 049:
+  Incoming W sum: Pearson=-0.1676, R²=-0.9468
+  Outgoing W sum: Pearson=-0.4763, R²=-2.0041
+  True incoming: mean=0.3978, std=3.6407
+  Learned incoming: mean=-0.7850, std=2.7842
+
+Model 011:
+  Incoming W sum: Pearson=-0.0894, R²=-1.8625
+  Outgoing W sum: Pearson=-0.1777, R²=-1.2963
+  True incoming: mean=0.1224, std=1.7493
+  Learned incoming: mean=-0.9239, std=1.9952
+
+Model 041:
+  Incoming W sum: Pearson=-0.1695, R²=-1.6922
+  Outgoing W sum: Pearson=0.3808, R²=-0.1758
+  True incoming: mean=0.4085, std=2.5005
+  Learned incoming: mean=-1.0902, std=2.4940
+
+Model 003:
+  Incoming W sum: Pearson=0.7156, R²=0.4923
+  Outgoing W sum: Pearson=0.9512, R²=0.8969
+  True incoming: mean=0.2188, std=1.9901
+  Learned incoming: mean=0.4850, std=1.3375
+
+======================================================================
+ANALYSIS 4: Iter 17 Catastrophe (lin_edge_positive=False)
+======================================================================
+
+Model 049 after lin_edge_positive=False:
+  W Pearson correlation: -0.0960
+  W R²: -1.2324
+  Sign match rate: 0.3182 (31.8%)
+  Magnitude ratio (learned/true): 1.6651
+  W_learned mean: -0.024847
+  W_learned std: 0.2940
+
+  Comparison with previous attempts:
+  (All regressed from baseline 0.634)
+  Iter 17 (lin_edge_positive=False): conn_R2=0.092 (WORST)
+  Iter 13 (edge_norm=5.0): conn_R2=0.108
+  Iter 9 (edge_diff=900): conn_R2=0.124
+  Iter 5 (lr_W=1E-3): conn_R2=0.130
+  Iter 1 (data_aug=25): conn_R2=0.141
+  Baseline: conn_R2=0.634
+
+======================================================================
+ANALYSIS 5: What Makes Model 049 Fundamentally Different?
+======================================================================
+
+Cross-model W_true Pearson correlations:
+          049   011   041   003
+  049:  1.000 0.336 0.383 0.553
+  011:  0.336 1.000 0.591 0.467
+  041:  0.383 0.591 1.000 0.624
+  003:  0.553 0.467 0.624 1.000
+
+
+Per-neuron-type W_true statistics (comparing 049 vs 003):
+
+Top 5 type pairs with HIGHEST weight variance in Model 049:
+  Type (-6→ 0): 049_var=2.069448, 003_var=1.613774, ratio=1.28, count=872
+  Type ( 6→ 0): 049_var=2.033413, 003_var=1.582429, ratio=1.28, count=892
+  Type (-5→ 0): 049_var=2.009840, 003_var=1.559547, ratio=1.29, count=524
+  Type (-4→ 0): 049_var=2.008831, 003_var=1.558636, ratio=1.29, count=572
+  Type (-3→ 0): 049_var=2.007979, 003_var=1.557866, ratio=1.29, count=620
+
+======================================================================
+ANALYSIS 6: Edge Recovery by Magnitude
+======================================================================
+
+Model 049:
+  Magnitude bin | Count | Pearson | Sign match
+  --------------------------------------------------
+  <0.001        |  65859 |  0.0461 | 0.3897
+  0.001-0.01    |  80046 | -0.0244 | 0.3577
+  0.01-0.1      | 218525 | -0.0990 | 0.2842
+  >0.1          |  65359 | -0.3688 | 0.2925
+
+Model 011:
+  Magnitude bin | Count | Pearson | Sign match
+  --------------------------------------------------
+  <0.001        | 102079 | -0.0342 | 0.4080
+  0.001-0.01    |  68252 | -0.0415 | 0.3942
+  0.01-0.1      | 194588 | -0.0870 | 0.3683
+  >0.1          |  66792 | -0.1892 | 0.3142
+
+Model 041:
+  Magnitude bin | Count | Pearson | Sign match
+  --------------------------------------------------
+  <0.001        |  93304 |  0.0796 | 0.4828
+  0.001-0.01    |  59255 |  0.0766 | 0.6090
+  0.01-0.1      | 203656 |  0.1930 | 0.5210
+  >0.1          |  73161 |  0.1267 | 0.4842
+
+Model 003:
+  Magnitude bin | Count | Pearson | Sign match
+  --------------------------------------------------
+  <0.001        |  97387 | -0.0279 | 0.4220
+  0.001-0.01    |  58387 |  0.2863 | 0.8679
+  0.01-0.1      | 198519 |  0.8678 | 0.9764
+  >0.1          |  75696 |  0.9456 | 1.0000
+
+======================================================================
+SUMMARY: Model 049 Fundamental Limitation
+======================================================================
+
+Key findings:
+1. Activity rank does NOT simply predict recoverability
+   - Model 041 (rank=6) is SOLVED but Model 049 (rank=19) is NOT
+
+2. lin_edge_positive=False made Model 049 WORSE, not better
+   - Hypothesis that squaring caused sign inversion is FALSIFIED
+   - The sign inversion is from W optimization dynamics, not architecture
+
+3. Model 049 appears to have a FUNDAMENTAL structural mismatch where:
+   - The activity patterns do not uniquely determine the connectivity
+   - Multiple W configurations can produce similar activity patterns
+   - The GNN finds a different (sign-inverted) solution
+
+4. After 8 experiments, ALL attempts regressed from baseline (0.634)
+   - This is not hyperparameter sensitivity — it's a structural limitation
+   - The baseline config may already be near-optimal for this model
+
+RECOMMENDATIONS:
+- Accept Model 049 as fundamentally hard (baseline 0.634 is achievable max)
+- Try lr_W=1E-4 as final attempt (very slow W learning)
+- Focus remaining iterations on Models 011 (0.716) and 041 tau improvement
+

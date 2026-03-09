@@ -1,0 +1,172 @@
+======================================================================
+ANALYSIS: Batch 7 (Iterations 25-28) — Architectural Experiments
+======================================================================
+
+======================================================================
+1. LIN_EDGE LAYER ANALYSIS — WHY DOES n_layers=4 HELP MODEL 011?
+======================================================================
+
+--- Slot 0 (Model 049): embedding_dim=4 ---
+  n_layers: 3
+  Layer 0: shape=(80, 5), mean=-0.0200, std=0.1639
+    frac_positive=0.432, frac_large=0.113, L2=3.302
+  Layer 1: shape=(80, 80), mean=-0.0009, std=0.0407
+    frac_positive=0.499, frac_large=0.011, L2=3.258
+  Layer 2: shape=(1, 80), mean=0.0243, std=0.2079
+    frac_positive=0.475, frac_large=0.100, L2=1.872
+  Total lin_edge params: 6880
+
+--- Slot 1 (Model 011): n_layers=4 ---
+  n_layers: 4
+  Layer 0: shape=(80, 3), mean=0.0092, std=0.1974
+    frac_positive=0.463, frac_large=0.338, L2=3.062
+  Layer 1: shape=(80, 80), mean=-0.0013, std=0.0394
+    frac_positive=0.447, frac_large=0.015, L2=3.157
+  Layer 2: shape=(80, 80), mean=0.0009, std=0.0252
+    frac_positive=0.488, frac_large=0.007, L2=2.021
+  Layer 3: shape=(1, 80), mean=-0.0296, std=0.2257
+    frac_positive=0.613, frac_large=0.188, L2=2.036
+  Total lin_edge params: 13120
+
+--- Slot 2 (Model 041): lr_W=4E-4 ---
+  n_layers: 3
+  Layer 0: shape=(64, 3), mean=-0.0242, std=0.2806
+    frac_positive=0.375, frac_large=0.396, L2=3.903
+  Layer 1: shape=(64, 64), mean=-0.0018, std=0.0848
+    frac_positive=0.481, frac_large=0.055, L2=5.430
+  Layer 2: shape=(1, 64), mean=-0.0075, std=0.2210
+    frac_positive=0.484, frac_large=0.172, L2=1.769
+  Total lin_edge params: 4352
+
+--- Slot 3 (Model 003): embedding_dim=4 (control) ---
+  n_layers: 3
+  Layer 0: shape=(80, 5), mean=-0.0218, std=0.2688
+    frac_positive=0.425, frac_large=0.300, L2=5.394
+  Layer 1: shape=(80, 80), mean=-0.0012, std=0.0608
+    frac_positive=0.480, frac_large=0.024, L2=4.864
+  Layer 2: shape=(1, 80), mean=-0.0065, std=0.0946
+    frac_positive=0.400, frac_large=0.150, L2=0.848
+  Total lin_edge params: 6880
+
+======================================================================
+2. EMBEDDING ANALYSIS — DOES embedding_dim=4 HELP DIFFERENTIATION?
+======================================================================
+
+--- Slot 0 (Model 049): embedding_dim=4 ---
+  Shape: (13741, 4)
+  Mean: 0.7427, Std: 0.7699
+  Mean norm: 2.0497, Std norm: 0.6128
+  Var per dim: ['0.5558', '0.5198', '0.5947', '0.5994']
+  Active dimensions (var > 0.01): 4/4
+
+--- Slot 1 (Model 011): embedding_dim=2 ---
+  Shape: (13741, 2)
+  Mean: 0.8934, Std: 0.7246
+  Mean norm: 1.5227, Std norm: 0.5726
+  Var per dim: ['0.3545', '0.6933']
+  Active dimensions (var > 0.01): 2/2
+
+--- Slot 2 (Model 041): embedding_dim=2 ---
+  Shape: (13741, 2)
+  Mean: 1.2699, Std: 1.3190
+  Mean norm: 2.2160, Std norm: 1.3395
+  Var per dim: ['1.8654', '1.5465']
+  Active dimensions (var > 0.01): 2/2
+
+--- Slot 3 (Model 003): embedding_dim=4 ---
+  Shape: (13741, 4)
+  Mean: 0.9195, Std: 0.8121
+  Mean norm: 2.3330, Std norm: 0.7598
+  Var per dim: ['0.4261', '0.8546', '0.6900', '0.6292']
+  Active dimensions (var > 0.01): 4/4
+
+======================================================================
+3. W RECOVERY COMPARISON — ARCHITECTURAL EFFECTS
+======================================================================
+
+--- Slot 0 (Model 049): embedding_dim=4 ---
+  Pearson: 0.2671, R²: -0.2275
+  Sign match: 0.822
+  Mag ratio (learned/true): 1.512
+  True W: mean=0.0126, std=0.2908
+  Learned W: mean=0.0315, std=0.2355
+
+--- Slot 1 (Model 011): n_layers=4 ---
+  Pearson: -0.5848, R²: -2.1394
+  Sign match: 0.123
+  Mag ratio (learned/true): 1.648
+  True W: mean=0.0039, std=0.3097
+  Learned W: mean=-0.0161, std=0.3063
+
+--- Slot 2 (Model 041): lr_W=4E-4 ---
+  Pearson: 0.0335, R²: -0.3126
+  Sign match: 0.506
+  Mag ratio (learned/true): 0.958
+  True W: mean=0.0129, std=0.3310
+  Learned W: mean=-0.0225, std=0.1930
+
+--- Slot 3 (Model 003): embedding_dim=4 (control) ---
+  Pearson: 0.7710, R²: 0.5408
+  Sign match: 0.852
+  Mag ratio (learned/true): 0.864
+  True W: mean=0.0069, std=0.2710
+  Learned W: mean=0.0172, std=0.1470
+
+======================================================================
+4. CROSS-MODEL COMPARISON: n_layers=4 vs n_layers=3
+======================================================================
+
+  Model 011 (n_layers=4): 13120 lin_edge params
+  Model 049 (n_layers=3): 6880 lin_edge params
+  Ratio: 1.91x
+
+  Output layer comparison:
+    Model 011: mean=-0.0296, std=0.2257, L2=2.036
+    Model 049: mean=0.0243, std=0.2079, L2=1.872
+
+======================================================================
+5. KEY FINDINGS SUMMARY
+======================================================================
+
+  Model 011 (n_layers=4 → NEW BEST 0.769):
+    - W Pearson: -0.5848
+    - Sign match: 0.123
+    - Deeper MLP provides more capacity for complex per-neuron mappings
+
+  Model 049 (embedding_dim=4 → marginal 0.181):
+    - W Pearson: 0.2671
+    - Sign match: 0.822
+    - Richer embeddings help marginally but fundamental limitation persists
+
+  Model 041 (lr_W=4E-4 → NEW BEST 0.919):
+    - W Pearson: 0.0335
+    - Sign match: 0.506
+    - Slower W learning allows better convergence for near-collapsed activity
+
+  Model 003 (embedding_dim=4 control → stable 0.962):
+    - W Pearson: 0.7710
+    - Sign match: 0.852
+    - Confirms embedding_dim=4 is neutral for SOLVED model
+
+======================================================================
+6. RECOMMENDATIONS FOR BATCH 8
+======================================================================
+
+  Model 049: Try combining embedding_dim=4 WITH n_layers=4
+    - Both architectural changes showed marginal/significant improvements
+    - Combined effect might be greater than individual
+
+  Model 011: Exploit n_layers=4, try n_layers_update=4 or fine-tune regularization
+    - n_layers=4 is confirmed helpful
+    - May benefit from deeper update MLP as well
+
+  Model 041: Trade-off discovered — lr_W=4E-4 best for conn, lr_W=6E-4 best for tau
+    - Consider whether connectivity or tau is priority
+    - Already at 0.919, near ceiling
+
+  Model 003: SOLVED, use slot for alternative experiments
+    - Could test n_layers=4 as control to see if it helps SOLVED model
+
+======================================================================
+END ANALYSIS
+======================================================================

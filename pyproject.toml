@@ -1,0 +1,70 @@
+[project]
+name = "flyvis_gnn"
+version = "0.1.0"
+dependencies = [
+    "numpy",
+    "torch",
+    "pyyaml",
+    "scipy",
+    "matplotlib",
+    "scikit-learn",
+    "pydantic",
+    "tqdm",
+    "imageio",
+    "seaborn",
+    "pandas",
+    "zarr",
+    "tensorstore",
+    "tifffile",
+    "joblib",
+    "Pillow",
+    "scikit-image",
+    "xarray",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "tier1: Pure math functions (numpy/torch only, fast)",
+    "tier2: Pure logic with minor package dependencies",
+    "tier3: nn.Module forward pass shape tests",
+]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501",   # line length — handled by line-length setting
+    "E402",   # module-import-not-at-top — common in ML (conditional/deferred imports)
+    "E741",   # ambiguous variable name — l, I, O used in math/physics code
+    "F841",   # unused variable — often intentional in scientific code
+    "E731",   # lambda assignment — stylistic, harmless
+    "E711",   # none-comparison — `== None` used intentionally in some torch contexts
+    "E712",   # true-false-comparison — stylistic
+    "E702",   # multiple-statements-on-one-line-semicolon — scientific code style
+    "E701",   # multiple-statements-on-one-line-colon — scientific code style
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.jupytext]
+formats = "ipynb,py:percent"

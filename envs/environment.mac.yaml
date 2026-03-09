@@ -1,0 +1,62 @@
+name: flyvis-gnn-mac
+channels:
+  - pytorch
+  - conda-forge
+
+dependencies:
+  # Core
+  - python=3.12
+  - pip
+
+  # Keep the BLAS/OpenMP stack consistent on macOS (no Accelerate pin)
+  - "libblas=*=*openblas*"
+
+  # Scientific / data
+  - numpy=2.3.3
+  - scipy=1.16.2
+  - pandas
+  - matplotlib
+  - seaborn
+  - scikit-image
+  - dask
+  - umap-learn
+  - networkx
+  - prettytable
+  - pyyaml
+  - tqdm
+  - tensorboard
+  - imageio
+  - tifffile
+  - shapely
+  - pydantic
+  - astropy
+  - pyvista
+  - vtk # keep VTK native on conda (pip wheels may bundle their own OMP)
+  - opencv # same reason; avoid pip opencv-python's vendor libs
+  - pyqt # Qt via conda to avoid mixed toolchains
+  - pysr
+  - pytables # native HDF5 bindings via conda
+  - ipython
+  - ipykernel
+  - jupytext
+  - tensorstore
+  - cachetools
+  - napari
+  - plotly
+  - ruff
+  - tyro
+
+  # PyTorch on conda (single OpenMP runtime managed by conda)
+  - pytorch=2.7.1
+  - torchvision=0.23.0
+  - torchaudio=2.7.1
+
+  - pip:
+      # Keep only packages that aren't well-supported natively on conda
+      - geomloss==0.2
+      - torch_geometric==2.7.0
+      - torchdiffeq
+      - vedo
+      - joblib
+      - flyvis
+      - polars
