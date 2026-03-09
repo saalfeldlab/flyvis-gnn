@@ -1,0 +1,410 @@
+# %% [raw]
+# ---
+# title: "Robustness to Edge Removal"
+# author: "Allier, Lappalainen, Saalfeld"
+# categories:
+#   - FlyVis
+#   - GNN
+#   - Edge Removal
+# execute:
+#   echo: false
+# image: "log/fly/flyvis_noise_005_removed_pc_05/results/weights_comparison_corrected.png"
+# description: "Train the GNN on incomplete connectomes where 2%, 5%, 10%, and 20% of edges have been removed. Evaluate whether the model can still recover synaptic weights, biophysical parameters, and neuron-type identity despite missing connections."
+# ---
+
+# %% [markdown]
+# ## Robustness to Edge Removal
+#
+# In a real experimental setting, the connectome may contain false
+# negatives: true synaptic connections that are missed during
+# reconstruction.  To test robustness to such incomplete adjacency
+# matrices, we randomly removed a fraction of edges from the true
+# connectome (434,112 edges) before training the GNN.  The model
+# must recover the circuit parameters using only the remaining
+# connections.
+#
+# We tested four levels of edge removal:
+#
+# | Config | Removed edges | Remaining edges | Fraction removed |
+# |:--|:--|:--|:--|
+# | `flyvis_noise_005_removed_pc_02` | 8,682 | 425,430 | 2% |
+# | `flyvis_noise_005_removed_pc_05` | 21,706 | 412,406 | 5% |
+# | `flyvis_noise_005_removed_pc_10` | 43,411 | 390,701 | 10% |
+# | `flyvis_noise_005_removed_pc_20` | 86,822 | 347,290 | 20% |
+
+# %% [markdown]
+# ## Noise Level
+#
+# Recall that the simulated dynamics include an intrinsic noise term
+# $\sigma\,\xi_i(t)$ where $\xi_i(t) \sim \mathcal{N}(0,1)$
+# ([Notebook 00](Notebook_00.html)).  All edge-removal experiments
+# presented here use a fixed noise level of $\sigma = 0.05$
+# (low noise).  To change the noise level, edit the
+# `noise_model_level` field in the respective config files:
+#
+# - `config/fly/flyvis_noise_005_removed_pc_02.yaml`
+# - `config/fly/flyvis_noise_005_removed_pc_05.yaml`
+# - `config/fly/flyvis_noise_005_removed_pc_10.yaml`
+# - `config/fly/flyvis_noise_005_removed_pc_20.yaml`
+
+# %%
+#| output: false
+import glob
+import os
+import warnings
+
+from IPython.display import Image, Markdown, display
+
+sys_path = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else '.'
+import sys
+sys.path.insert(0, sys_path)
+
+from GNN_PlotFigure import data_plot
+from flyvis_gnn.config import NeuralGraphConfig
+from flyvis_gnn.models.graph_trainer import data_test
+from flyvis_gnn.plot import plot_loss_from_file
+from flyvis_gnn.utils import set_device, add_pre_folder, graphs_data_path, log_path
+
+warnings.filterwarnings("ignore", message="pkg_resources is deprecated as an API")
+warnings.filterwarnings("ignore", category=FutureWarning)
+
+
+def display_image(path, width=700):
+    """Display a full-resolution image; width controls inline size (px)."""
+    if os.path.isfile(path):
+        display(Image(filename=path, width=width))
+    else:
+        display(Markdown(f"*Image not found: `{os.path.basename(path)}`*"))
+
+
+# %% [markdown]
+# ## Results
+#
+# Each config extends the base `flyvis_noise_005` setup with a
+# different fraction of edges randomly removed from the adjacency
+# matrix.  Edges are removed uniformly at random per column
+# (consistent across pre-synaptic neurons).  The GNN architecture
+# and training hyperparameters are otherwise identical across
+# conditions.
+#
+# The GNN tolerates significant edge removal: even with 20% of
+# connections missing, it recovers the remaining synaptic weights
+# and biophysical parameters with high fidelity.  This suggests
+# the model exploits redundancy in the network dynamics to
+# compensate for incomplete connectivity information.
+
+# %%
+#| output: false
+datasets = [
+    ('flyvis_noise_005_removed_pc_02', '2%', '2% edges removed (8,682 removed / 425,430 remaining)'),
+    ('flyvis_noise_005_removed_pc_05', '5%', '5% edges removed (21,706 removed / 412,406 remaining)'),
+    ('flyvis_noise_005_removed_pc_10', '10%', '10% edges removed (43,411 removed / 390,701 remaining)'),
+    ('flyvis_noise_005_removed_pc_20', '20%', '20% edges removed (86,822 removed / 347,290 remaining)'),
+]
+
+config_root = "./config"
+configs = {}
+graphs_dirs = {}
+
+for config_name, table_label, label in datasets:
+    config_file, pre_folder = add_pre_folder(config_name)
+    config = NeuralGraphConfig.from_yaml(f"{config_root}/{config_file}.yaml")
+    config.dataset = pre_folder + config.dataset
+    config.config_file = pre_folder + config_name
+    configs[config_name] = config
+    graphs_dirs[config_name] = graphs_data_path(config.dataset)
+
+device = set_device(configs[datasets[0][0]].training.device)
+
+# %%
+#| output: false
+# Check that data exists
+missing_data = []
+for config_name, table_label, label in datasets:
+    gdir = graphs_dirs[config_name]
+    has_data = (os.path.isfile(os.path.join(gdir, "x_list_train.pt"))
+                or os.path.isfile(os.path.join(gdir, "x_list_train.npy"))
+                or os.path.isdir(os.path.join(gdir, "x_list_train")))
+    if not has_data:
+        missing_data.append(label)
+
+if missing_data:
+    msg = ", ".join(missing_data)
+    raise RuntimeError(
+        f"Training data not found for: {msg}. "
+        f"Please run Notebook_00 first to generate the data, then train "
+        f"with: python GNN_Main.py -o generate_train <config_name>"
+    )
+
+# Check that trained models exist
+missing_models = []
+for config_name, table_label, label in datasets:
+    log_dir = log_path(configs[config_name].config_file)
+    model_files = glob.glob(f"{log_dir}/models/best_model_with_*.pt")
+    if not model_files:
+        missing_models.append(f"{label} ({config_name})")
+
+if missing_models:
+    msg = ", ".join(missing_models)
+    raise RuntimeError(
+        f"No trained models found for: {msg}. "
+        f"Please train with: python GNN_Main.py -o generate_train <config_name>"
+    )
+
+# %%
+def parse_plot_results(log_dir):
+    """Extract key metrics from data_plot metrics.txt."""
+    metrics = {}
+    path = os.path.join(log_dir, "results", "metrics.txt")
+    if not os.path.isfile(path):
+        return metrics
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if ':' in line:
+                key, val = line.split(':', 1)
+                metrics[key.strip()] = val.strip()
+    return metrics
+
+
+header = "| Metric | " + " | ".join(table_label for _, table_label, _ in datasets) + " |"
+sep = "|:--|" + "|".join(":--:" for _ in datasets) + "|"
+rows = [header, sep]
+
+metric_keys = [
+    ('W_corrected_R2', '$W$ corrected $R^2$'),
+    ('W_corrected_slope', '$W$ corrected slope'),
+    ('tau_R2', '$\\tau$ $R^2$'),
+    ('V_rest_R2', '$V^{\\text{rest}}$ $R^2$'),
+    ('clustering_accuracy', 'Clustering accuracy'),
+]
+
+for key, display_name in metric_keys:
+    cells = []
+    for config_name, _, _ in datasets:
+        log_dir = log_path(configs[config_name].config_file)
+        m = parse_plot_results(log_dir)
+        cells.append(m.get(key, '\u2014'))
+    rows.append(f"| {display_name} | " + " | ".join(cells) + " |")
+
+display(Markdown("\n".join(rows)))
+
+# %% [markdown]
+# ## Loss Curves
+
+# %%
+#| lightbox: true
+for config_name, table_label, label in datasets:
+    gnn_log_dir = log_path(configs[config_name].config_file)
+    display(Markdown(f"### {label}"))
+    loss_png = plot_loss_from_file(gnn_log_dir)
+    if loss_png:
+        display_image(loss_png, width=900)
+    else:
+        print(f"[{label}] loss_components.pt not found.")
+
+# %% [markdown]
+# ## Testing
+#
+# We evaluate each trained model on held-out stimuli and compute
+# rollout predictions.
+
+# %%
+#| echo: true
+#| output: false
+for config_name, table_label, label in datasets:
+    config = configs[config_name]
+    gnn_log_dir = log_path(config.config_file)
+    print(f"\n--- Testing {label} ---")
+    data_test(
+        config=config,
+        visualize=True,
+        style="color name continuous_slice",
+        verbose=False,
+        best_model='best',
+        run=0,
+        step=10,
+        n_rollout_frames=250,
+        device=device,
+    )
+
+# %% [markdown]
+# ## Rollout Traces
+
+# %%
+#| lightbox: true
+for config_name, table_label, label in datasets:
+    gnn_log_dir = log_path(configs[config_name].config_file)
+    results_dir = os.path.join(gnn_log_dir, "results")
+    if not os.path.isdir(results_dir):
+        continue
+    display(Markdown(f"### {label}"))
+    rollout_all = sorted([f for f in os.listdir(results_dir)
+                          if f.startswith("rollout_") and "_all" in f
+                          and "on_" not in f and f.endswith(".png")])
+    rollout_sel = sorted([f for f in os.listdir(results_dir)
+                          if f.startswith("rollout_") and "selected" in f
+                          and "on_" not in f and f.endswith(".png")])
+    if rollout_all:
+        display_image(os.path.join(results_dir, rollout_all[0]), width=900)
+    if rollout_sel:
+        display_image(os.path.join(results_dir, rollout_sel[0]), width=900)
+
+# %% [markdown]
+# ## GNN Analysis: Learned Representations
+#
+# We run the same analysis as [Notebook 04](Notebook_04.html) on
+# each edge-removal model to assess whether circuit recovery is
+# preserved despite the incomplete adjacency matrix.
+
+# %%
+#| echo: true
+#| output: false
+for config_name, table_label, label in datasets:
+    config = configs[config_name]
+    print(f"\n--- Generating analysis plots for {label} ---")
+    data_plot(
+        config=config,
+        config_file=config.config_file,
+        epoch_list=['best'],
+        style='color',
+        extended='plots',
+        device=device,
+    )
+
+# %%
+#| output: false
+def get_config_indices(config_name):
+    config = configs[config_name]
+    return config.dataset.split('flyvis_')[1] if 'flyvis_' in config.dataset else config_name.replace('flyvis_', '')
+
+
+def show_result(filename, config_name, width=600):
+    gnn_log_dir = log_path(configs[config_name].config_file)
+    idx = get_config_indices(config_name)
+    path = os.path.join(gnn_log_dir, "results", filename.format(idx=idx))
+    display_image(path, width=width)
+
+
+def show_mlp(mlp_name, config_name, suffix=""):
+    gnn_log_dir = log_path(configs[config_name].config_file)
+    idx = get_config_indices(config_name)
+    path = os.path.join(gnn_log_dir, "results", f"{mlp_name}_{idx}{suffix}.png")
+    display_image(path, width=700)
+
+
+# %% [markdown]
+# ### Corrected Weights ($W$)
+
+# %%
+#| lightbox: true
+for config_name, table_label, label in datasets:
+    display(Markdown(f"#### {label}"))
+    show_result("weights_comparison_corrected.png", config_name)
+
+# %% [markdown]
+# ### $f_\theta$ (MLP$_0$): Neuron Update Function
+
+# %%
+#| lightbox: true
+for config_name, table_label, label in datasets:
+    display(Markdown(f"#### {label}"))
+    show_mlp("MLP0", config_name, "_domain")
+
+# %% [markdown]
+# ### Time Constants ($\tau$)
+
+# %%
+#| lightbox: true
+for config_name, table_label, label in datasets:
+    display(Markdown(f"#### {label}"))
+    show_result("tau_comparison_{idx}.png", config_name, width=500)
+
+# %% [markdown]
+# ### Resting Potentials ($V^{\text{rest}}$)
+
+# %%
+#| lightbox: true
+for config_name, table_label, label in datasets:
+    display(Markdown(f"#### {label}"))
+    show_result("V_rest_comparison_{idx}.png", config_name, width=500)
+
+# %% [markdown]
+# ### $g_\phi$ (MLP$_1$): Edge Message Function
+
+# %%
+#| lightbox: true
+for config_name, table_label, label in datasets:
+    display(Markdown(f"#### {label}"))
+    show_mlp("MLP1", config_name, "_domain")
+
+# %% [markdown]
+# ### Neural Embeddings
+
+# %%
+#| lightbox: true
+for config_name, table_label, label in datasets:
+    display(Markdown(f"#### {label}"))
+    show_result("embedding_{idx}.png", config_name)
+
+# %% [markdown]
+# ### UMAP Projections
+
+# %%
+#| lightbox: true
+for config_name, table_label, label in datasets:
+    display(Markdown(f"#### {label}"))
+    show_result("embedding_augmented_{idx}.png", config_name)
+
+# %% [markdown]
+# ### Spectral Analysis
+
+# %%
+#| lightbox: true
+for config_name, table_label, label in datasets:
+    display(Markdown(f"#### {label}"))
+    show_result("eigen_comparison.png", config_name, width=900)
+
+# %% [markdown]
+# ## Rollout Metrics
+
+# %%
+def parse_results_log(path):
+    """Parse a results log file into a dict of metric_name -> value string."""
+    metrics = {}
+    if not os.path.isfile(path):
+        return metrics
+    with open(path) as f:
+        for line in f:
+            for key in ['RMSE', 'Pearson r']:
+                if line.startswith(f'{key}:'):
+                    metrics[key] = line.split(':', 1)[1].strip()
+    return metrics
+
+
+header = "| Metric | " + " | ".join(table_label for _, table_label, _ in datasets) + " |"
+sep = "|:--|" + "|".join(":--:" for _ in datasets) + "|"
+rows = [header, sep]
+
+for key in ['RMSE', 'Pearson r']:
+    cells = []
+    for config_name, _, _ in datasets:
+        log_dir = log_path(configs[config_name].config_file)
+        m = parse_results_log(os.path.join(log_dir, "results_rollout.log"))
+        cells.append(m.get(key, '\u2014'))
+    rows.append(f"| {key} | " + " | ".join(cells) + " |")
+
+display(Markdown("\n".join(rows)))
+
+# %% [markdown]
+# ## References
+#
+# [1] J. K. Lappalainen et al., "Connectome-constrained networks predict
+# neural activity across the fly visual system," *Nature*, 2024.
+# [doi:10.1038/s41586-024-07939-3](https://doi.org/10.1038/s41586-024-07939-3)
+#
+# [2] C. Allier, L. Heinrich, M. Schneider, S. Saalfeld, "Graph
+# neural networks uncover structure and functions underlying the
+# activity of simulated neural assemblies," *arXiv:2602.13325*,
+# 2026.
+# [doi:10.48550/arXiv.2602.13325](https://doi.org/10.48550/arXiv.2602.13325)

@@ -1,0 +1,124 @@
+======================================================================
+BATCH 11 ANALYSIS: Architecture, W_L1, and Recurrent Training Effects
+======================================================================
+
+======================================================================
+SECTION 1: Model 049 — Why Simpler Architecture Destroys Recurrent Gains
+======================================================================
+
+Iter 33 (n_layers=4, emb=4): conn_R2=0.501 (BEST)
+Iter 41 (n_layers=3, emb=2): conn_R2=0.150 (3.3x WORSE)
+
+Iter 41 W metrics:
+  Pearson:     -0.2627
+  R²:          -1.1533
+  Sign match:  21.3%
+  Mag ratio:   1.71x
+
+Per-neuron W correlation (Iter 41):
+  Incoming: -0.0859
+  Outgoing: -0.7056
+
+Embedding shape: (13741, 2)
+  Per-dim variance: [0.509487  0.7927567]
+  Active dims (var>0.1): 2/2
+
+lin_edge MLP: 3 layers
+  Total params: 6720
+  Layer 0: shape=(80, 3), L2=3.012, frac_large=0.154
+  Layer 1: shape=(80, 80), L2=3.021, frac_large=0.005
+  Layer 2: shape=(1, 80), L2=0.890, frac_large=0.062
+
+>>> HYPOTHESIS: Simpler architecture (n_layers=3, emb=2) cannot process
+    temporal gradient aggregation effectively. Recurrent training needs
+    MORE capacity to extract useful signal from accumulated gradients.
+
+======================================================================
+SECTION 2: Model 011 — Why W_L1=5E-5 Hurts Recurrent Training
+======================================================================
+
+Iter 38 (W_L1=3E-5, recurrent): conn_R2=0.810 (BEST)
+Iter 42 (W_L1=5E-5, recurrent): conn_R2=0.732 (REGRESSION)
+
+Iter 42 W metrics (W_L1=5E-5):
+  Pearson:     -0.5092
+  R²:          -2.8561
+  Sign match:  16.3%
+  Mag ratio:   2.49x
+
+Per-neuron W correlation (Iter 42):
+  Incoming: -0.3676
+  Outgoing: -0.7944
+
+W magnitude analysis:
+  W_true:    mean=0.003874, std=0.309673
+  W_learned: mean=-0.022380, std=0.388271
+  |W_true|>0.01:    263398
+  |W_learned|>0.01: 377866
+
+>>> HYPOTHESIS: Stronger W_L1 (5E-5) over-penalizes W during recurrent
+    gradient aggregation. Recurrent training accumulates gradients over
+    time, so the effective L1 penalty is multiplied. W_L1=3E-5 is optimal.
+
+======================================================================
+SECTION 3: Model 041 — Why Recurrent Training Hurts Near-Collapsed Activity
+======================================================================
+
+Iter 35 (recurrent=False): conn_R2=0.931 (BEST)
+Iter 43 (recurrent=True):  conn_R2=0.869 (REGRESSION)
+
+Iter 43 W metrics (recurrent=True):
+  Pearson:     0.0205
+  R²:          -0.4863
+  Sign match:  52.3%
+  Mag ratio:   1.22x
+
+Per-neuron W correlation (Iter 43):
+  Incoming: -0.2529
+  Outgoing: 0.3856
+
+>>> HYPOTHESIS: Near-collapsed activity (svd_rank=6) has very low-dimensional
+    gradient signal. Per-frame training already extracts maximal information.
+    Recurrent training adds temporal noise that degrades the signal.
+
+======================================================================
+SECTION 4: Model 003 — 11th Confirmation of SOLVED Status
+======================================================================
+
+Iter 44 (recurrent=False): conn_R2=0.968 (STABLE)
+
+Iter 44 W metrics:
+  Pearson:     0.7931
+  R²:          0.5778
+  Sign match:  84.2%
+  Mag ratio:   0.86x
+
+Per-neuron W correlation (Iter 44):
+  Incoming: 0.7075
+  Outgoing: 0.9455
+
+======================================================================
+SECTION 5: Cross-Model Summary — Recurrent Training is Model-Dependent
+======================================================================
+
+| Model | svd_rank | Per-neuron W | Best Config | Recurrent Effect |
+|-------|----------|--------------|-------------|------------------|
+| 049   | 19       | NEGATIVE     | recurrent+complex | HELPS (0.16→0.50) |
+| 011   | 45       | NEGATIVE     | recurrent+W_L1=3E-5 | HELPS (0.77→0.81) |
+| 041   | 6        | MIXED        | per-frame   | HURTS (0.93→0.87) |
+| 003   | 60       | POSITIVE     | per-frame   | NEUTRAL (0.97→0.97) |
+
+>>> KEY INSIGHT: Recurrent training benefit is tied to per-neuron W correlation:
+    - NEGATIVE per-neuron W → recurrent HELPS (temporal context disambiguates)
+    - POSITIVE per-neuron W → recurrent NEUTRAL (already sufficient info)
+    - Near-collapsed activity → recurrent HURTS (adds noise to weak signal)
+
+>>> NEXT STEPS:
+    - Model 049: Keep Iter 33 config, try slower lr_W=5E-4
+    - Model 011: Keep Iter 38 config (W_L1=3E-5), try lr_W variations
+    - Model 041: SOLVED at Iter 35, no further experiments
+    - Model 003: SOLVED at Iter 4, no further experiments
+
+======================================================================
+END OF ANALYSIS
+======================================================================

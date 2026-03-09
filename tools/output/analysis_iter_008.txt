@@ -1,0 +1,72 @@
+======================================================================
+ANALYSIS ITER 008: Why Model 049 Keeps Failing
+======================================================================
+Error loading Model 049: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first.
+Error loading Model 011: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first.
+Error loading Model 041: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first.
+Error loading Model 003: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first.
+
+=== 1. W_true vs W_learned: Sign Analysis ===
+Checking if learned W has correct SIGN structure...
+
+
+=== 2. W_learned Statistics: Range and Distribution ===
+Comparing learned W ranges across models...
+
+
+=== 3. Activity Correlation with W_true ===
+Testing if activity structure affects edge learnability...
+
+  Activity analysis skipped: 'NoneType' object is not subscriptable
+
+=== 4. V_rest Analysis: Why Some Models Collapse ===
+Comparing V_rest recovery across models...
+
+
+=== 5. Embedding Analysis: Per-Model Structure ===
+Comparing embedding distributions across models...
+
+
+=== 6. Per-Neuron-Type W Recovery (Top 10 Hardest Types) ===
+Which neuron types are hardest to recover for each model?
+
+
+=== 7. Model 049 vs 003 Comparison (Opposite Hard Types) ===
+Batch 1 found corr=-1.000 between 049 and 003 type difficulties.
+This means OPPOSITE types are hard. Why?
+
+
+=== 8. Model 049 Deeper Dive: Why Does lr_W=1E-3 Fail? ===
+Model 011 improved dramatically with lr_W=1E-3, but 049 got worse.
+
+
+=== 9. Summary: Model Difficulty Categories ===
+
+MODEL DIFFICULTY ASSESSMENT:
+--------------------------------------------------
+Model 049: FAILING    (R²=0.130) - lr_W=1E-3 fails; need different approach
+Model 011: PARTIAL    (R²=0.674) - lr_W=1E-3 helps conn but edge_diff=900 hurts
+Model 041: CONVERGED  (R²=0.883) - Connectivity OK but V_rest collapsed
+Model 003: SOLVED     (R²=0.968) - edge_diff=900 optimal, all metrics good
+
+======================================================================
+RECOMMENDATIONS FOR NEXT BATCH:
+======================================================================
+
+Model 049: Try BASELINE lr (6E-4) + edge_diff=900 + W_L1=3E-5
+  - lr_W=1E-3 fails for this model specifically
+  - edge_diff=900 works for Model 003, may help stabilize 049
+  - Focus on regularization, not learning rate
+
+Model 011: Return to edge_diff=750, try W_L1=2E-5
+  - edge_diff=900 hurt connectivity, revert
+  - Lower W_L1 may help V_rest without connectivity loss
+
+Model 041: Try edge_diff=1200 + phi_L1=1.0
+  - Stronger regularization needed for V_rest
+  - Connectivity is stable, focus on secondary metrics
+
+Model 003: Maintain edge_diff=900, try phi_L1=0.6
+  - Model is solved, minor improvements only
+  - Test if phi_L1 can improve V_rest further
+
