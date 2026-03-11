@@ -487,14 +487,10 @@ def compute_dynamics_r2(model, x_ts, config, device, n_neurons):
     Returns:
         (vrest_r2, tau_r2): tuple of float R² values.
     """
-    gt_V_rest_tensor = torch.load(graphs_data_path(config.dataset, 'V_i_rest.pt'),
-                                  map_location=device, weights_only=True)
-    tau_path = graphs_data_path(config.dataset, 'taus.pt')
-    if not os.path.exists(tau_path):
-        tau_path = graphs_data_path(config.dataset, 'tau_i.pt')
-    gt_tau_tensor = torch.load(tau_path, map_location=device, weights_only=True)
-    gt_V_rest = to_numpy(gt_V_rest_tensor[:n_neurons])
-    gt_tau = to_numpy(gt_tau_tensor[:n_neurons])
+    from flyvis_gnn.generators.ode_params import FlyVisODEParams
+    ode_params = FlyVisODEParams.load(graphs_data_path(config.dataset), device=device)
+    gt_V_rest = to_numpy(ode_params.V_i_rest[:n_neurons])
+    gt_tau = to_numpy(ode_params.tau_i[:n_neurons])
 
     mu, sigma = compute_activity_stats(x_ts, device)
     slopes, offsets = extract_f_theta_slopes(model, config, n_neurons, mu, sigma, device)
@@ -525,15 +521,11 @@ def compute_dynamics_r2_linear(model, config, device, n_neurons):
     """
     import torch.nn.functional as F
 
-    gt_V_rest = to_numpy(torch.load(
-        graphs_data_path(config.dataset, 'V_i_rest.pt'),
-        map_location=device, weights_only=True)[:n_neurons])
-    tau_path = graphs_data_path(config.dataset, 'taus.pt')
-    if not os.path.exists(tau_path):
-        tau_path = graphs_data_path(config.dataset, 'tau_i.pt')
-    gt_tau = to_numpy(torch.load(tau_path, map_location=device, weights_only=True)[:n_neurons])
-    gt_weights = to_numpy(torch.load(
-        graphs_data_path(config.dataset, 'weights.pt'), map_location=device, weights_only=False))
+    from flyvis_gnn.generators.ode_params import FlyVisODEParams
+    ode_params = FlyVisODEParams.load(graphs_data_path(config.dataset), device=device)
+    gt_V_rest = to_numpy(ode_params.V_i_rest[:n_neurons])
+    gt_tau = to_numpy(ode_params.tau_i[:n_neurons])
+    gt_weights = to_numpy(ode_params.W)
 
     learned_tau = to_numpy(F.softplus(model.raw_tau[:n_neurons]).detach())
     learned_vrest = to_numpy(model.V_rest[:n_neurons].detach())

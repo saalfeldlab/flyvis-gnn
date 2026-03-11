@@ -153,8 +153,10 @@ def data_train_flyvis(config, erase, best_model, device, log_file=None):
         _logger.info(f'svd analysis already exists: {svd_plot_path}')
 
     # Load edges early so n_edges is correct before model creation
-    gt_weights = torch.load(graphs_data_path(config.dataset, 'weights.pt'), map_location=device, weights_only=False)
-    edges = torch.load(graphs_data_path(config.dataset, 'edge_index.pt'), map_location=device, weights_only=False)
+    from flyvis_gnn.generators.ode_params import FlyVisODEParams
+    ode_params = FlyVisODEParams.load(graphs_data_path(config.dataset), device=device)
+    gt_weights = ode_params.W
+    edges = ode_params.edge_index
     actual_n_edges = edges.shape[1]
     expected_total = sim.n_edges + sim.n_extra_null_edges
     if actual_n_edges == expected_total and sim.n_extra_null_edges > 0:

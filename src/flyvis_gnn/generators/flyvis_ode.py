@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from flyvis_gnn.generators.ode_params import FlyVisODEParams, ODEParamsBase
 from flyvis_gnn.neuron_state import NeuronState
 
 
@@ -96,16 +97,19 @@ class FlyVisODE(nn.Module):
     Uses explicit scatter_add for message passing (no PyG dependency).
     """
 
-    def __init__(self, aggr_type="add", p=[], params=[], f=torch.nn.functional.relu, model_type=None, n_neuron_types=None, device=None):
+    def __init__(self, aggr_type="add", ode_params=None, params=[], g_phi=torch.nn.functional.relu, model_type=None, n_neuron_types=None, device=None):
         super().__init__()
 
-        self.p = p
-        self.f = f
+        # Accept dict (legacy) or ODE_params_class instance
+        if isinstance(ode_params, dict):
+            ode_params = FlyVisODEParams(**ode_params)
+        self.ode_params = ode_params
+        self.g_phi = g_phi
         self.model_type = model_type
         self.device = device
 
-        for key in self.p:
-            self.p[key] = self.p[key].to(device)
+        if self.ode_params is not None:
+            self.ode_params.to(device)
 
         if 'multiple_ReLU' in model_type:
             if n_neuron_types is None:
@@ -134,11 +138,11 @@ class FlyVisODE(nn.Module):
         particle_type_src = particle_type[src]
 
         if 'multiple_ReLU' in self.model_type:
-            edge_msg = self.p["w"][:, None] * self.f(v_src) * self.params[particle_type_src.squeeze()]
+            edge_msg = self.ode_params.W[:, None] * self.g_phi(v_src) * self.params[particle_type_src.squeeze()]
         elif 'NULL' in self.model_type:
-            edge_msg = 0 * self.f(v_src)
+            edge_msg = 0 * self.g_phi(v_src)
         else:
-            edge_msg = self.p["w"][:, None] * self.f(v_src)
+            edge_msg = self.ode_params.W[:, None] * self.g_phi(v_src)
 
         msg = torch.zeros(v.shape[0], edge_msg.shape[1], device=self.device, dtype=v.dtype)
         msg.scatter_add_(0, dst.unsqueeze(1).expand_as(edge_msg), edge_msg)
@@ -156,12 +160,12 @@ class FlyVisODE(nn.Module):
             dv: (N, 1) voltage derivative
         """
         v = state.voltage.unsqueeze(-1)
-        v_rest = self.p["V_i_rest"][:, None]
+        v_rest = self.ode_params.V_i_rest[:, None]
         e = state.stimulus.unsqueeze(-1)
         particle_type = state.neuron_type.unsqueeze(-1).long()
 
         msg = self._compute_messages(v, particle_type, edge_index)
-        tau = self.p["tau_i"][:, None]
+        tau = self.ode_params.tau_i[:, None]
 
         if 'tanh' in self.model_type:
             s = self.params
@@ -174,12 +178,12 @@ class FlyVisODE(nn.Module):
     def func(self, u, type, function):
         if function == 'phi':
             if 'multiple_ReLU' in self.model_type:
-                return self.f(u) * self.params[type]
+                return self.g_phi(u) * self.params[type]
             else:
-                return self.f(u)
+                return self.g_phi(u)
         elif function == 'update':
-            v_rest = self.p["V_i_rest"][type]
-            tau = self.p["tau_i"][type]
+            v_rest = self.ode_params.V_i_rest[type]
+            tau = self.ode_params.tau_i[type]
             if 'tanh' in self.model_type:
                 s = self.params
                 return (-u + v_rest + s * torch.tanh(u)) / tau

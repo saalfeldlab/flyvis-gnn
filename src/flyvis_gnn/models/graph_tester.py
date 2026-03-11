@@ -24,6 +24,7 @@ from flyvis_gnn.generators.graph_data_generator import (
     greedy_blue_mask,
     mseq_bits,
 )
+from flyvis_gnn.generators.ode_params import FlyVisODEParams
 from flyvis_gnn.generators.utils import generate_compressed_video_mp4
 from flyvis_gnn.log import get_logger
 from flyvis_gnn.metrics import INDEX_TO_NAME
@@ -639,12 +640,8 @@ def data_test_flyvis_special(
     net.load_state_dict(trained_net.state_dict())
     torch.set_grad_enabled(False)
 
-    params = net._param_api()
-    p = {"tau_i": params.nodes.time_const, "V_i_rest": params.nodes.bias,
-         "w": params.edges.syn_strength * params.edges.syn_count * params.edges.sign}
-    edge_index = torch.stack(
-        [torch.tensor(net.connectome.edges.source_index[:]), torch.tensor(net.connectome.edges.target_index[:])],
-        dim=0).to(device)
+    ode_params = FlyVisODEParams.from_flyvis_network(net, device=device)
+    edge_index = ode_params.edge_index
 
     if sim.n_extra_null_edges > 0:
         logger.info(f"adding {sim.n_extra_null_edges} extra null edges (mode={sim.null_edges_mode})...")
@@ -693,10 +690,11 @@ def data_test_flyvis_special(
         if extra_edges:
             extra_edge_index = torch.tensor(extra_edges, dtype=torch.long, device=device).t()
             edge_index = torch.cat([edge_index, extra_edge_index], dim=1)
-            p["w"] = torch.cat([p["w"], torch.zeros(len(extra_edges), device=device)])
+            ode_params.edge_index = edge_index
+            ode_params.W = torch.cat([ode_params.W, torch.zeros(len(extra_edges), device=device)])
 
-    pde = FlyVisODE(p=p, f=torch.nn.functional.relu, params=sim.params, model_type=model_config.signal_model_name, n_neuron_types=n_neuron_types, device=device)
-    pde_modified = FlyVisODE(p=copy.deepcopy(p), f=torch.nn.functional.relu, params=sim.params, model_type=model_config.signal_model_name, n_neuron_types=n_neuron_types, device=device)
+    pde = FlyVisODE(ode_params=ode_params, g_phi=torch.nn.functional.relu, params=sim.params, model_type=model_config.signal_model_name, n_neuron_types=n_neuron_types, device=device)
+    pde_modified = FlyVisODE(ode_params=ode_params.clone(), g_phi=torch.nn.functional.relu, params=sim.params, model_type=model_config.signal_model_name, n_neuron_types=n_neuron_types, device=device)
 
 
     model = create_model(model_config.signal_model_name,
@@ -823,7 +821,7 @@ def data_test_flyvis_special(
     n_columns = sim.n_input_neurons // 8
     tile_seed = sim.seed
 
-    edges = torch.load(graphs_data_path(config.dataset, 'edge_index.pt'), map_location=device, weights_only=False)
+    edges = ode_params.edge_index
 
     if ('test_ablation' in test_mode) & ('MLP' not in model_config.signal_model_name) & ('RNN' not in model_config.signal_model_name) & ('LSTM' not in model_config.signal_model_name):
         #  test_mode="test_ablation_100"
@@ -834,18 +832,18 @@ def data_test_flyvis_special(
         index_ablation = np.random.choice(np.arange(edges.shape[1]), n_ablation, replace=False)
 
         with torch.no_grad():
-            pde.p['w'][index_ablation] = 0
-            pde_modified.p['w'][index_ablation] = 0
+            pde.ode_params.W[index_ablation] = 0
+            pde_modified.ode_params.W[index_ablation] = 0
             model.W[index_ablation] = 0
 
     if 'test_modified' in test_mode:
         noise_W = float(test_mode.split('_')[-1])
         if noise_W > 0:
             logger.info(f'test modified W with noise level {noise_W}')
-            noise_p_W = torch.randn_like(pde.p['w']) * noise_W # + torch.ones_like(pde.p['w'])
-            pde_modified.p['w'] = pde.p['w'].clone() + noise_p_W
+            noise_p_W = torch.randn_like(pde.ode_params.W) * noise_W
+            pde_modified.ode_params.W = pde.ode_params.W.clone() + noise_p_W
 
-        plot_weight_comparison(pde.p['w'], pde_modified.p['w'], f"{log_dir}/results/weight_comparison_{noise_W}.png")
+        plot_weight_comparison(pde.ode_params.W, pde_modified.ode_params.W, f"{log_dir}/results/weight_comparison_{noise_W}.png")
 
 
     fig_style = dark_style

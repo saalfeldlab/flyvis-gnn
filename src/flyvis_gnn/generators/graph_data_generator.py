@@ -310,7 +310,7 @@ def _run_ode_generation(stimulus_sequences, net, pde, x, edge_index, initial_sta
                                 D = squareform(pdist(col_centers))
                                 nn = np.partition(D + np.eye(D.shape[0]) * 1e9, 1, axis=1)[:, 1]
                                 radius = 1.3 * np.median(nn)
-                                adj = [set(np.where((D[i] > 0) & (D[i] <= radius))[0].tolist()) for i in
+                                adj = [set(node_params.Where((D[i] > 0) & (D[i] <= radius))[0].tolist()) for i in
                                        range(len(col_centers))]
 
                             tile_labels = torch.from_numpy(tile_labels_np).to(device, dtype=torch.long)
@@ -321,7 +321,7 @@ def _run_ode_generation(stimulus_sequences, net, pde, x, edge_index, initial_sta
                             rng = np.random.RandomState(sim.seed)
                             for t in range(tile_period):
                                 mask = greedy_blue_mask(adj, n_columns, target_density=0.5, rng=rng)
-                                vals = np.where(mask, 1.0, -1.0).astype(np.float32)
+                                vals = node_params.Where(mask, 1.0, -1.0).astype(np.float32)
                                 tile_codes_torch[:, t] = torch.from_numpy(vals).to(device, dtype=torch.float32)
 
                         x.stimulus[:] = 0.5
@@ -501,6 +501,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
         get_photoreceptor_positions_from_net,
         group_by_direction_and_function,
     )
+    from flyvis_gnn.generators.ode_params import FlyVisODEParams, get_ode_params_class
     from flyvis_gnn.utils import setup_flyvis_model_path
 
     logging.getLogger().setLevel(logging.WARNING)
@@ -579,12 +580,8 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
 
     # Extract ground-truth parameters: time constants (tau), resting potentials (V_rest),
     # and effective synaptic weights (strength * count * sign) for PDE simulation.
-    params = net._param_api()
-    p = {"tau_i": params.nodes.time_const, "V_i_rest": params.nodes.bias,
-         "w": params.edges.syn_strength * params.edges.syn_count * params.edges.sign}
-    edge_index = torch.stack(
-        [torch.tensor(net.connectome.edges.source_index[:]), torch.tensor(net.connectome.edges.target_index[:])],
-        dim=0).to(device)
+    ode_params = FlyVisODEParams.from_flyvis_network(net, device=device)
+    edge_index = ode_params.edge_index
 
     if sim.n_extra_null_edges > 0:
         logger.info(f"adding {sim.n_extra_null_edges} extra null edges (mode={sim.null_edges_mode})...")
@@ -641,7 +638,8 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
         if extra_edges:
             extra_edge_index = torch.tensor(extra_edges, dtype=torch.long, device=device).t()
             edge_index = torch.cat([edge_index, extra_edge_index], dim=1)
-            p["w"] = torch.cat([p["w"], torch.zeros(len(extra_edges), device=device)])
+            ode_params.edge_index = edge_index
+            ode_params.W = torch.cat([ode_params.W, torch.zeros(len(extra_edges), device=device)])
             logger.info(f"Total extra edges added: {len(extra_edges)}")
 
     # Edge ablation: zero out a fraction of edge weights before ODE simulation
@@ -653,10 +651,10 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
         ablate_indices = rng.choice(n_edges, size=n_ablate, replace=False)
         ablation_mask = torch.ones(n_edges, dtype=torch.bool, device=device)
         ablation_mask[ablate_indices] = False
-        p["w"][~ablation_mask] = 0.0
+        ode_params.W[~ablation_mask] = 0.0
         logger.info(f"ablated {n_ablate}/{n_edges} edges ({sim.ablation_ratio*100:.0f}%)")
 
-    pde = FlyVisODE(p=p, f=torch.nn.functional.relu, params=sim.params,
+    pde = FlyVisODE(ode_params=ode_params, g_phi=torch.nn.functional.relu, params=sim.params,
                     model_type=model_config.signal_model_name, n_neuron_types=sim.n_neuron_types, device=device)
 
     # Edge removal: drop a fraction of edges before saving
@@ -664,7 +662,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
     if sim.edge_removal_ratio > 0:
         # Save full edges first (for reference / analysis)
         if save:
-            torch.save(p["w"].clone(), graphs_data_path(config.dataset, "weights_full.pt"))
+            torch.save(ode_params.W.clone(), graphs_data_path(config.dataset, "weights_full.pt"))
             torch.save(edge_index.clone(), graphs_data_path(config.dataset, "edge_index_full.pt"))
 
         rng_rm = np.random.RandomState(sim.edge_removal_seed)
@@ -677,20 +675,21 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
             src_np = edge_index[0].cpu().numpy()
             keep_mask = np.ones(n_total, dtype=bool)
             for source in np.unique(src_np):
-                source_edges = np.where(src_np == source)[0]
+                source_edges = node_params.Where(src_np == source)[0]
                 n_remove = max(1, int(round(len(source_edges) * sim.edge_removal_ratio)))
                 if n_remove >= len(source_edges):
                     n_remove = len(source_edges) - 1  # keep at least one
                 remove_idx = rng_rm.choice(source_edges, n_remove, replace=False)
                 keep_mask[remove_idx] = False
-            kept_indices = np.where(keep_mask)[0]
+            kept_indices = node_params.Where(keep_mask)[0]
         else:
             # Random removal across the full edge set
             n_keep = int(n_total * (1 - sim.edge_removal_ratio))
             kept_indices = np.sort(rng_rm.choice(n_total, n_keep, replace=False))
 
         edge_index = edge_index[:, kept_indices]
-        p["w"] = p["w"][kept_indices]
+        ode_params.edge_index = edge_index
+        ode_params.W = ode_params.W[kept_indices]
         logger.info(f"edge removal: kept {len(kept_indices)}/{n_total} edges "
                      f"({(1 - len(kept_indices)/n_total)*100:.1f}% removed)")
         if save:
@@ -698,10 +697,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
                         graphs_data_path(config.dataset, "kept_edge_indices.pt"))
 
     if save:
-        torch.save(p["w"], graphs_data_path(config.dataset, "weights.pt"))
-        torch.save(edge_index, graphs_data_path(config.dataset, "edge_index.pt"))
-        torch.save(p["tau_i"], graphs_data_path(config.dataset, "taus.pt"))
-        torch.save(p["V_i_rest"], graphs_data_path(config.dataset, "V_i_rest.pt"))
+        ode_params.save(folder)
         if ablation_mask is not None:
             torch.save(ablation_mask, graphs_data_path(config.dataset, "ablation_mask.pt"))
 
@@ -959,7 +955,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
             # Voltage SNR: std(clean_voltage) / std(measurement_noise) per neuron
             signal_std = np.std(activity_full, axis=0)  # (N,)
             noise_std = np.std(noise_data, axis=0)       # (N,)
-            voltage_snr = np.where(noise_std > 0, signal_std / noise_std, np.inf)
+            voltage_snr = node_params.Where(noise_std > 0, signal_std / noise_std, np.inf)
             voltage_snr_finite = voltage_snr[np.isfinite(voltage_snr)]
 
             # Derivative SNR: std(clean_derivative) / std(derivative_noise) per neuron
@@ -968,7 +964,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
             deriv_noise_std = np.std(deriv_noise, axis=0)             # (N,)
             y_clean = load_raw_array(graphs_data_path(config.dataset, 'y_list_train'))  # (T, N, 1)
             deriv_signal_std = np.std(y_clean[:, :, 0], axis=0)  # (N,)
-            deriv_snr = np.where(deriv_noise_std > 0, deriv_signal_std / deriv_noise_std, np.inf)
+            deriv_snr = node_params.Where(deriv_noise_std > 0, deriv_signal_std / deriv_noise_std, np.inf)
             deriv_snr_finite = deriv_snr[np.isfinite(deriv_snr)]
 
             deriv_noise_std_theoretical = sim.measurement_noise_level * np.sqrt(2) / sim.delta_t

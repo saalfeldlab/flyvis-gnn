@@ -1051,14 +1051,11 @@ def plot_training_linear(model, config, epoch, N, log_dir, device,
     learned_vrest = to_numpy(model.V_rest[:n_neurons].detach())
 
     # Load ground-truth tau and V_rest for scatter plots
+    from flyvis_gnn.generators.ode_params import FlyVisODEParams
     from flyvis_gnn.utils import graphs_data_path
-    tau_path = graphs_data_path(config.dataset, 'taus.pt')
-    if not os.path.exists(tau_path):
-        tau_path = graphs_data_path(config.dataset, 'tau_i.pt')
-    gt_tau_np = to_numpy(torch.load(tau_path, map_location=device, weights_only=True)[:n_neurons])
-    gt_vrest_np = to_numpy(torch.load(
-        graphs_data_path(config.dataset, 'V_i_rest.pt'),
-        map_location=device, weights_only=True)[:n_neurons])
+    ode_params = FlyVisODEParams.load(graphs_data_path(config.dataset), device=device)
+    gt_tau_np = to_numpy(ode_params.tau_i[:n_neurons])
+    gt_vrest_np = to_numpy(ode_params.V_i_rest[:n_neurons])
 
     # Plot 1: Raw W scatter
     fig, ax = plt.subplots(figsize=(8, 8))
