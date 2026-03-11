@@ -19,7 +19,7 @@ Refractory period: v frozen for t_refrac after spike.
 import torch
 import torch.nn as nn
 
-from flyvis_gnn.generators.ode_params import FlyVisSpikingODEParams
+from flyvis_gnn.generators.ode_params import FlyVisAdExODEParams
 from flyvis_gnn.neuron_state import NeuronState
 
 
@@ -30,7 +30,7 @@ class FlyVisAdExODE(nn.Module):
     Uses scatter_add for event-triggered spike propagation.
     """
 
-    def __init__(self, ode_params: FlyVisSpikingODEParams, device=None):
+    def __init__(self, ode_params: FlyVisAdExODEParams, device=None):
         super().__init__()
         self.ode_params = ode_params
         self.device = device

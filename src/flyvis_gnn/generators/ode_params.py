@@ -248,7 +248,7 @@ ADEX_DEFAULTS = dict(
 
 @register_ode_params("flyvis_adex_coba", "flyvis_adex_cuba")
 @dataclass
-class FlyVisSpikingODEParams(ODEParamsBase):
+class FlyVisAdExODEParams(ODEParamsBase):
     """Parameters for the AdEx spiking FlyVis ODE.
 
     Per-neuron static params (indexed by neuron, one value per node):
@@ -315,7 +315,7 @@ class FlyVisSpikingODEParams(ODEParamsBase):
     def from_defaults(cls, n_neurons: int, is_excitatory: torch.Tensor,
                       edge_index: torch.Tensor, synapse_model: str = "COBA",
                       device: torch.device | str = "cpu",
-                      overrides: dict | None = None) -> FlyVisSpikingODEParams:
+                      overrides: dict | None = None) -> FlyVisAdExODEParams:
         """Construct from Zerlaut defaults with per-neuron expansion.
 
         Args:
@@ -365,7 +365,7 @@ class FlyVisSpikingODEParams(ODEParamsBase):
     @classmethod
     def from_flyvis_network(cls, net, synapse_model: str = "COBA",
                             device: torch.device | str = "cpu",
-                            overrides: dict | None = None) -> FlyVisSpikingODEParams:
+                            overrides: dict | None = None) -> FlyVisAdExODEParams:
         """Construct from a flyvis Network, using Zerlaut defaults for AdEx params.
 
         E/I identity is inferred from the sign of synaptic weights:

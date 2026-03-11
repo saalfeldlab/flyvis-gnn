@@ -47,10 +47,10 @@ logger = get_logger(__name__)
 
 def _is_spiking_model(signal_model_name: str) -> bool:
     """Check if signal_model_name maps to a spiking ODE params class via the registry."""
-    from flyvis_gnn.generators.ode_params import FlyVisSpikingODEParams, get_ode_params_class
+    from flyvis_gnn.generators.ode_params import FlyVisAdExODEParams, get_ode_params_class
     try:
         cls = get_ode_params_class(signal_model_name)
-        return cls is FlyVisSpikingODEParams
+        return cls is FlyVisAdExODEParams
     except KeyError:
         return False
 
@@ -491,7 +491,7 @@ def data_generate_fly_AdEx_spiking(config, visualize=True, run_vizualized=0, sty
         get_photoreceptor_positions_from_net,
         group_by_direction_and_function,
     )
-    from flyvis_gnn.generators.ode_params import FlyVisSpikingODEParams
+    from flyvis_gnn.generators.ode_params import FlyVisAdExODEParams
     from flyvis_gnn.utils import setup_flyvis_model_path
 
     fig_style = dark_style if "black" in style else default_style
@@ -561,7 +561,7 @@ def data_generate_fly_AdEx_spiking(config, visualize=True, run_vizualized=0, sty
     if hasattr(sim, 'adex_I_bias'):
         adex_overrides['I_bias'] = sim.adex_I_bias
 
-    ode_params = FlyVisSpikingODEParams.from_flyvis_network(
+    ode_params = FlyVisAdExODEParams.from_flyvis_network(
         net, synapse_model=synapse_model, device=device,
         overrides=adex_overrides if adex_overrides else None,
     )
