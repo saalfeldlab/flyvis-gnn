@@ -6,7 +6,6 @@ Contains:
 - data_test_flyvis_special: ablation/modification test via ODE regeneration
 """
 
-import copy
 import glob
 import os
 

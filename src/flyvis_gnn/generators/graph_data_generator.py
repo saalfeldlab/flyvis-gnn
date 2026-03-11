@@ -332,7 +332,7 @@ def _run_ode_generation(stimulus_sequences, net, pde, x, edge_index, initial_sta
                                 D = squareform(pdist(col_centers))
                                 nn = np.partition(D + np.eye(D.shape[0]) * 1e9, 1, axis=1)[:, 1]
                                 radius = 1.3 * np.median(nn)
-                                adj = [set(node_params.Where((D[i] > 0) & (D[i] <= radius))[0].tolist()) for i in
+                                adj = [set(np.where((D[i] > 0) & (D[i] <= radius))[0].tolist()) for i in
                                        range(len(col_centers))]
 
                             tile_labels = torch.from_numpy(tile_labels_np).to(device, dtype=torch.long)
@@ -343,7 +343,7 @@ def _run_ode_generation(stimulus_sequences, net, pde, x, edge_index, initial_sta
                             rng = np.random.RandomState(sim.seed)
                             for t in range(tile_period):
                                 mask = greedy_blue_mask(adj, n_columns, target_density=0.5, rng=rng)
-                                vals = node_params.Where(mask, 1.0, -1.0).astype(np.float32)
+                                vals = np.where(mask, 1.0, -1.0).astype(np.float32)
                                 tile_codes_torch[:, t] = torch.from_numpy(vals).to(device, dtype=torch.float32)
 
                         x.stimulus[:] = 0.5
@@ -801,7 +801,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
         get_photoreceptor_positions_from_net,
         group_by_direction_and_function,
     )
-    from flyvis_gnn.generators.ode_params import FlyVisODEParams, get_ode_params_class
+    from flyvis_gnn.generators.ode_params import FlyVisODEParams
     from flyvis_gnn.utils import setup_flyvis_model_path
 
     logging.getLogger().setLevel(logging.WARNING)
@@ -975,13 +975,13 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
             src_np = edge_index[0].cpu().numpy()
             keep_mask = np.ones(n_total, dtype=bool)
             for source in np.unique(src_np):
-                source_edges = node_params.Where(src_np == source)[0]
+                source_edges = np.where(src_np == source)[0]
                 n_remove = max(1, int(round(len(source_edges) * sim.edge_removal_ratio)))
                 if n_remove >= len(source_edges):
                     n_remove = len(source_edges) - 1  # keep at least one
                 remove_idx = rng_rm.choice(source_edges, n_remove, replace=False)
                 keep_mask[remove_idx] = False
-            kept_indices = node_params.Where(keep_mask)[0]
+            kept_indices = np.where(keep_mask)[0]
         else:
             # Random removal across the full edge set
             n_keep = int(n_total * (1 - sim.edge_removal_ratio))
@@ -1255,7 +1255,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
             # Voltage SNR: std(clean_voltage) / std(measurement_noise) per neuron
             signal_std = np.std(activity_full, axis=0)  # (N,)
             noise_std = np.std(noise_data, axis=0)       # (N,)
-            voltage_snr = node_params.Where(noise_std > 0, signal_std / noise_std, np.inf)
+            voltage_snr = np.where(noise_std > 0, signal_std / noise_std, np.inf)
             voltage_snr_finite = voltage_snr[np.isfinite(voltage_snr)]
 
             # Derivative SNR: std(clean_derivative) / std(derivative_noise) per neuron
@@ -1264,7 +1264,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
             deriv_noise_std = np.std(deriv_noise, axis=0)             # (N,)
             y_clean = load_raw_array(graphs_data_path(config.dataset, 'y_list_train'))  # (T, N, 1)
             deriv_signal_std = np.std(y_clean[:, :, 0], axis=0)  # (N,)
-            deriv_snr = node_params.Where(deriv_noise_std > 0, deriv_signal_std / deriv_noise_std, np.inf)
+            deriv_snr = np.where(deriv_noise_std > 0, deriv_signal_std / deriv_noise_std, np.inf)
             deriv_snr_finite = deriv_snr[np.isfinite(deriv_snr)]
 
             deriv_noise_std_theoretical = sim.measurement_noise_level * np.sqrt(2) / sim.delta_t

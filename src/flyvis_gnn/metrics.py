@@ -9,7 +9,6 @@ Used by:
     - graph_trainer.py (training-time monitoring)
     - sparsify.py (pruning)
 """
-import os
 from typing import Optional
 
 import numpy as np
