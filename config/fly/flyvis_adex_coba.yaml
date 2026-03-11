@@ -21,7 +21,7 @@ simulation:
   # AdEx-specific
   adex_dt: 0.2         # ms — Euler substep (50 substeps per stimulus frame)
   adex_stim_scale: 100.0  # pA per unit stimulus — needs calibration
-  adex_I_bias: 200.0   # pA — tonic drive to keep neurons near threshold
+  adex_I_bias: 300.0   # pA — tonic drive (higher overcomes adaptation faster, ISI ~80ms)
 graph_model:
   signal_model_name: flyvis_adex_coba
   prediction: first_derivative
