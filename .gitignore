@@ -90,3 +90,7 @@ docs/
 *.ipynb
 
 **/*.quarto_ipynb
+
+# Assets (LFS-tracked PNGs/HTMLs)
+assets/*.png
+assets/*.html
