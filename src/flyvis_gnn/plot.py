@@ -729,12 +729,22 @@ def plot_spiking_traces(
     if stimulus.shape[1] > n_frames:
         stimulus = stimulus[:, :n_frames]
 
-    # --- Figure 1: voltage traces (matching activity_traces.png style) ---
-    n_traces = min(n_traces, n_neurons)
-    neuron_indices = np.sort(np.random.choice(n_neurons, n_traces, replace=False))
+    # --- Figure 1: voltage traces — one neuron per type (like data_test) ---
+    names = INDEX_TO_NAME
+    unique_types = np.unique(type_list)
+    neuron_indices = []
+    type_labels = []
+    for t in unique_types:
+        indices = np.where(type_list == t)[0]
+        if len(indices) > 0:
+            neuron_indices.append(indices[0])
+            type_labels.append(names.get(int(t), f'type_{t}'))
+    neuron_indices = np.array(neuron_indices)
+    n_sel = len(neuron_indices)
+
     sampled = voltage[neuron_indices]
-    # Normalise each trace to unit range for stacking
-    offset = sampled + 40.0 * np.arange(len(neuron_indices))[:, None]
+    step_v = 40.0  # mV offset between traces
+    offset = sampled + step_v * np.arange(n_sel)[:, None]
 
     fig, ax = style.figure(aspect=1.5)
     ax.plot(offset.T, linewidth=0.5, alpha=0.7, color=style.foreground)
@@ -742,15 +752,14 @@ def plot_spiking_traces(
     # One red stimulus trace at the bottom
     if stimulus.shape[0] > 0:
         stim_trace = stimulus[0]
-        # Scale stimulus to fit below the voltage traces
         stim_min = offset.min() - 60.0
         stim_range = max(stim_trace.max() - stim_trace.min(), 1e-6)
         stim_scaled = (stim_trace - stim_trace.min()) / stim_range * 30.0 + stim_min
         ax.plot(stim_scaled, linewidth=0.8, alpha=0.9, color='red')
 
     style.xlabel(ax, 'time (substeps, dt={:.1f}ms)'.format(dt_ms), fontsize=16)
-    style.ylabel(ax, f'{len(neuron_indices)} / {n_neurons} neurons')
-    ax.set_yticks([])
+    ax.set_yticks([i * step_v for i in range(n_sel)])
+    ax.set_yticklabels(type_labels, fontsize=6)
     ax.tick_params(axis='x', labelsize=14)
     ax.set_xlim([0, n_frames])
     ax.set_ylim([offset.min() - 80, offset.max() + 20])
