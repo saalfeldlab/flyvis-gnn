@@ -372,11 +372,19 @@ class FlyVisSpikingODEParams(ODEParamsBase):
         neurons with net positive outgoing weight are excitatory.
         """
         params = net._param_api()
-        W = (params.edges.syn_strength * params.edges.syn_count * params.edges.sign).cpu()
+        W = (params.edges.syn_strength * params.edges.syn_count * params.edges.sign)
+        W = W.detach().cpu().float()
+        src_idx = net.connectome.edges.source_index[:]
+        dst_idx = net.connectome.edges.target_index[:]
+        # Ensure numpy conversion for torch.tensor to always produce CPU tensors
+        if hasattr(src_idx, 'cpu'):
+            src_idx = src_idx.detach().cpu().numpy()
+        if hasattr(dst_idx, 'cpu'):
+            dst_idx = dst_idx.detach().cpu().numpy()
         edge_index = torch.stack([
-            torch.tensor(net.connectome.edges.source_index[:]),
-            torch.tensor(net.connectome.edges.target_index[:]),
-        ], dim=0).cpu()
+            torch.tensor(src_idx, dtype=torch.long),
+            torch.tensor(dst_idx, dtype=torch.long),
+        ], dim=0)
 
         n_neurons = len(params.nodes.time_const)
         src = edge_index[0]
