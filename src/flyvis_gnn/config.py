@@ -228,6 +228,11 @@ class SimulationConfig(BaseModel):
     adex_stim_scale: float = 1.0      # pA per unit stimulus — converts visual input to current
     adex_I_bias: float = 0.0          # pA — constant bias current injected into all neurons
 
+    # Hodgkin-Huxley model parameters
+    hh_substeps: int = 50             # number of Euler substeps per stimulus frame
+    hh_stim_scale: float = 10.0       # uA/cm^2 per unit stimulus
+    hh_I_bias: float = 0.0            # uA/cm^2 — constant bias current
+
     connectivity_file: str = ""
     connectivity_init: list[float] = [-1]
     connectivity_filling_factor: float = 1

@@ -65,6 +65,11 @@ class NeuronState:
     spiked: torch.Tensor | None = None             # (N,) bool — crossed threshold this step
     refractory_counter: torch.Tensor | None = None # (N,) float32 — time left in refractory period
 
+    # Hodgkin-Huxley gate variables — None for non-HH models
+    hh_m: torch.Tensor | None = None  # (N,) float32 — Na activation gate
+    hh_h: torch.Tensor | None = None  # (N,) float32 — Na inactivation gate
+    hh_n: torch.Tensor | None = None  # (N,) float32 — K activation gate
+
     @property
     def n_neurons(self) -> int:
         """Infer N from the first non-None field."""

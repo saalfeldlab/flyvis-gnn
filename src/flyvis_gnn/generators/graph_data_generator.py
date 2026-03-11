@@ -378,8 +378,34 @@ def _run_ode_generation(stimulus_sequences, net, pde, x, edge_index, initial_sta
                                                                                                   dtype=torch.float32,
                                                                                                   device=device) * sim.noise_visual_input
 
-                    y = pde(x, edge_index, has_field=False)
-                    prev_calcium = x.calcium.clone()
+                    prev_calcium = x.calcium.clone() if x.calcium is not None else None
+
+                    # HH models use substeps for numerical stability
+                    hh_substeps = getattr(sim, 'hh_substeps', 1)
+                    has_gates = hasattr(pde, 'step_gates')
+
+                    if has_gates and hh_substeps > 1:
+                        # Multiple substeps per stimulus frame (HH)
+                        sub_dt = sim.delta_t / hh_substeps
+                        for _sub in range(hh_substeps):
+                            y = pde(x, edge_index, has_field=False)
+                            dv = y.squeeze()
+                            if sim.noise_model_level > 0:
+                                x.voltage = x.voltage + sub_dt * dv + torch.randn(n_neurons, dtype=torch.float32, device=device) * sim.noise_model_level / (hh_substeps ** 0.5)
+                            else:
+                                x.voltage = x.voltage + sub_dt * dv
+                            pde.step_gates(x, sub_dt)
+                        # y for recording is the last substep's derivative
+                        y = pde(x, edge_index, has_field=False)
+                    else:
+                        y = pde(x, edge_index, has_field=False)
+                        dv_step = y.squeeze()
+                        if sim.noise_model_level > 0:
+                            x.voltage = x.voltage + sim.delta_t * dv_step + torch.randn(n_neurons, dtype=torch.float32, device=device) * sim.noise_model_level
+                        else:
+                            x.voltage = x.voltage + sim.delta_t * dv_step
+                        if has_gates:
+                            pde.step_gates(x, sim.delta_t)
 
                     # Generate measurement noise for this timestep
                     if sim.measurement_noise_level > 0:
@@ -388,12 +414,6 @@ def _run_ode_generation(stimulus_sequences, net, pde, x, edge_index, initial_sta
                         x.noise = torch.zeros(n_neurons, dtype=torch.float32, device=device)
 
                     x_writer.append_state(x)
-
-                    dv = y.squeeze()
-                    if sim.noise_model_level > 0:
-                        x.voltage = x.voltage + sim.delta_t * dv + torch.randn(n_neurons, dtype=torch.float32, device=device) * sim.noise_model_level
-                    else:
-                        x.voltage = x.voltage + sim.delta_t * dv
 
                     if sim.calcium_type == "leaky":
                         if sim.calcium_activation == "softplus":
@@ -801,8 +821,15 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
         get_photoreceptor_positions_from_net,
         group_by_direction_and_function,
     )
-    from flyvis_gnn.generators.ode_params import FlyVisODEParams
+    from flyvis_gnn.generators.ode_params import FlyVisHodgkinHuxleyODEParams, FlyVisODEParams, get_ode_params_class
     from flyvis_gnn.utils import setup_flyvis_model_path
+
+    is_hh = False
+    try:
+        ode_cls = get_ode_params_class(model_config.signal_model_name)
+        is_hh = (ode_cls is FlyVisHodgkinHuxleyODEParams)
+    except KeyError:
+        pass
 
     logging.getLogger().setLevel(logging.WARNING)
     setup_flyvis_model_path()
@@ -878,9 +905,17 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
     net.load_state_dict(trained_net.state_dict())
     torch.set_grad_enabled(False)
 
-    # Extract ground-truth parameters: time constants (tau), resting potentials (V_rest),
-    # and effective synaptic weights (strength * count * sign) for PDE simulation.
-    ode_params = FlyVisODEParams.from_flyvis_network(net, device=device)
+    # Extract ground-truth parameters from flyvis connectome.
+    if is_hh:
+        hh_overrides = {}
+        if hasattr(sim, 'hh_stim_scale') and sim.hh_stim_scale:
+            hh_overrides['stim_scale'] = sim.hh_stim_scale
+        if hasattr(sim, 'hh_I_bias') and sim.hh_I_bias:
+            hh_overrides['I_bias'] = sim.hh_I_bias
+        ode_params = FlyVisHodgkinHuxleyODEParams.from_flyvis_network(
+            net, device=device, overrides=hh_overrides or None)
+    else:
+        ode_params = FlyVisODEParams.from_flyvis_network(net, device=device)
     edge_index = ode_params.edge_index
 
     if sim.n_extra_null_edges > 0:
@@ -954,8 +989,12 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
         ode_params.W[~ablation_mask] = 0.0
         logger.info(f"ablated {n_ablate}/{n_edges} edges ({sim.ablation_ratio*100:.0f}%)")
 
-    pde = FlyVisODE(ode_params=ode_params, g_phi=torch.nn.functional.relu, params=sim.params,
-                    model_type=model_config.signal_model_name, n_neuron_types=sim.n_neuron_types, device=device)
+    if is_hh:
+        from flyvis_gnn.generators.flyvis_hh_ode import FlyVisHodgkinHuxleyODE
+        pde = FlyVisHodgkinHuxleyODE(ode_params=ode_params, device=device)
+    else:
+        pde = FlyVisODE(ode_params=ode_params, g_phi=torch.nn.functional.relu, params=sim.params,
+                        model_type=model_config.signal_model_name, n_neuron_types=sim.n_neuron_types, device=device)
 
     # Edge removal: drop a fraction of edges before saving
     # (simulation already ran with the full graph)
@@ -1025,17 +1064,36 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
     # init neuron state x
 
     _init_calcium = torch.rand(n_neurons, dtype=torch.float32, device=device)
-    x = NeuronState(
-        index=torch.arange(n_neurons, dtype=torch.long, device=device),
-        pos=X1,
-        voltage=initial_state,
-        stimulus=net.stimulus().squeeze(),
-        group_type=torch.tensor(grouped_types, dtype=torch.long, device=device),
-        neuron_type=torch.tensor(node_types_int, dtype=torch.long, device=device),
-        calcium=_init_calcium,
-        fluorescence=sim.calcium_alpha * _init_calcium + sim.calcium_beta,
-        noise=torch.zeros(n_neurons, dtype=torch.float32, device=device),
-    )
+
+    if is_hh:
+        # HH: initialize at resting potential with steady-state gates
+        hh_state = pde.init_state(n_neurons)
+        x = NeuronState(
+            index=torch.arange(n_neurons, dtype=torch.long, device=device),
+            pos=X1,
+            voltage=hh_state.voltage,
+            stimulus=net.stimulus().squeeze(),
+            group_type=torch.tensor(grouped_types, dtype=torch.long, device=device),
+            neuron_type=torch.tensor(node_types_int, dtype=torch.long, device=device),
+            calcium=_init_calcium,
+            fluorescence=sim.calcium_alpha * _init_calcium + sim.calcium_beta,
+            noise=torch.zeros(n_neurons, dtype=torch.float32, device=device),
+            hh_m=hh_state.hh_m,
+            hh_h=hh_state.hh_h,
+            hh_n=hh_state.hh_n,
+        )
+    else:
+        x = NeuronState(
+            index=torch.arange(n_neurons, dtype=torch.long, device=device),
+            pos=X1,
+            voltage=initial_state,
+            stimulus=net.stimulus().squeeze(),
+            group_type=torch.tensor(grouped_types, dtype=torch.long, device=device),
+            neuron_type=torch.tensor(node_types_int, dtype=torch.long, device=device),
+            calcium=_init_calcium,
+            fluorescence=sim.calcium_alpha * _init_calcium + sim.calcium_beta,
+            noise=torch.zeros(n_neurons, dtype=torch.float32, device=device),
+        )
 
     # --- Subdirectory-level train/test split ---
     # arg_df is aligned with cached_sequences (shuffle applied to both in _build).

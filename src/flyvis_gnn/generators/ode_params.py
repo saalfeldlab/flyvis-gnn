@@ -396,3 +396,160 @@ class FlyVisAdExODEParams(ODEParamsBase):
             device=device,
             overrides=overrides,
         )
+
+
+# ---------------------------------------------------------------------------
+# FlyVis Hodgkin-Huxley model params
+# ---------------------------------------------------------------------------
+
+# Classic HH defaults (squid giant axon, Hodgkin & Huxley 1952).
+# Units: mV, uF/cm^2, mS/cm^2, uA/cm^2, ms.
+HH_DEFAULTS = dict(
+    # Membrane capacitance
+    C=1.0,               # uF/cm^2
+    # Leak
+    g_L=0.3,             # mS/cm^2
+    E_L=-54.387,         # mV — leak reversal potential
+    # Sodium
+    g_Na=120.0,          # mS/cm^2
+    E_Na=50.0,           # mV — sodium reversal potential
+    # Potassium
+    g_K=36.0,            # mS/cm^2
+    E_K=-77.0,           # mV — potassium reversal potential
+    # Synaptic coupling (continuous, voltage-dependent)
+    syn_tau=5.0,         # ms — synaptic activation time constant
+    syn_slope=5.0,       # mV — sigmoid slope for presynaptic activation
+    syn_v_half=-20.0,    # mV — sigmoid midpoint (threshold for synaptic activation)
+    # External input
+    I_bias=0.0,          # uA/cm^2 — constant bias current
+    stim_scale=10.0,     # uA/cm^2 per unit stimulus
+)
+
+
+@register_ode_params("flyvis_hodgkin_huxley")
+@dataclass
+class FlyVisHodgkinHuxleyODEParams(ODEParamsBase):
+    """Parameters for the Hodgkin-Huxley continuous spiking FlyVis ODE.
+
+    Per-neuron membrane params (indexed by neuron, one value per node):
+        C, g_L, E_L, g_Na, E_Na, g_K, E_K
+
+    Per-neuron synaptic coupling (continuous, voltage-dependent):
+        syn_tau, syn_slope, syn_v_half
+
+    Per-neuron external input:
+        I_bias, stim_scale
+
+    Network topology:
+        edge_index: (2, E) source/destination indices
+        W: (E,) effective synaptic weights (from flyvis connectome)
+    """
+    # Membrane — (N,) per neuron
+    C: torch.Tensor = None
+    g_L: torch.Tensor = None
+    E_L: torch.Tensor = None
+    g_Na: torch.Tensor = None
+    E_Na: torch.Tensor = None
+    g_K: torch.Tensor = None
+    E_K: torch.Tensor = None
+
+    # Synaptic coupling — (N,)
+    syn_tau: torch.Tensor = None
+    syn_slope: torch.Tensor = None
+    syn_v_half: torch.Tensor = None
+
+    # External input — (N,)
+    I_bias: torch.Tensor = None
+    stim_scale: torch.Tensor = None
+
+    # Topology
+    edge_index: torch.Tensor = None  # (2, E)
+    W: torch.Tensor = None           # (E,) effective synaptic weights
+
+    @classmethod
+    def from_defaults(cls, n_neurons: int, edge_index: torch.Tensor,
+                      W: torch.Tensor,
+                      device: torch.device | str = "cpu",
+                      overrides: dict | None = None) -> FlyVisHodgkinHuxleyODEParams:
+        """Construct from HH defaults with per-neuron expansion."""
+        d = {**HH_DEFAULTS}
+        if overrides:
+            d.update(overrides)
+
+        def _expand(val):
+            return torch.full((n_neurons,), val, dtype=torch.float32, device=device)
+
+        return cls(
+            C=_expand(d["C"]),
+            g_L=_expand(d["g_L"]),
+            E_L=_expand(d["E_L"]),
+            g_Na=_expand(d["g_Na"]),
+            E_Na=_expand(d["E_Na"]),
+            g_K=_expand(d["g_K"]),
+            E_K=_expand(d["E_K"]),
+            syn_tau=_expand(d["syn_tau"]),
+            syn_slope=_expand(d["syn_slope"]),
+            syn_v_half=_expand(d["syn_v_half"]),
+            I_bias=_expand(d["I_bias"]),
+            stim_scale=_expand(d["stim_scale"]),
+            edge_index=edge_index.to(device),
+            W=W.to(device),
+        )
+
+    @classmethod
+    def from_flyvis_network(cls, net, device: torch.device | str = "cpu",
+                            overrides: dict | None = None) -> FlyVisHodgkinHuxleyODEParams:
+        """Construct from a flyvis Network.
+
+        Per-type params derived from flyvis connectome:
+            tau_i -> g_L = C / tau_i  (leak conductance from time constant)
+            V_i_rest -> E_L           (leak reversal from resting potential)
+
+        Na/K conductances use uniform squid-axon defaults.
+        Synaptic weights W come from the connectome (continuous coupling).
+        """
+        params = net._param_api()
+        W = (params.edges.syn_strength * params.edges.syn_count * params.edges.sign).detach().to(device).float()
+        src_raw = net.connectome.edges.source_index[:]
+        dst_raw = net.connectome.edges.target_index[:]
+        edge_index = torch.stack([
+            torch.tensor(src_raw, dtype=torch.long, device=device) if not isinstance(src_raw, torch.Tensor) else src_raw.to(device).long(),
+            torch.tensor(dst_raw, dtype=torch.long, device=device) if not isinstance(dst_raw, torch.Tensor) else dst_raw.to(device).long(),
+        ], dim=0)
+
+        n_neurons = len(params.nodes.time_const)
+
+        # Per-type from flyvis: tau_i -> g_L, V_i_rest -> E_L
+        tau_i = params.nodes.time_const.detach().to(device).float()
+        V_i_rest = params.nodes.bias.detach().to(device).float()
+
+        d = {**HH_DEFAULTS}
+        if overrides:
+            d.update(overrides)
+
+        C_val = d["C"]
+        def _expand(val):
+            return torch.full((n_neurons,), val, dtype=torch.float32, device=device)
+
+        # g_L = C / tau_i (per-neuron, derived from flyvis time constants)
+        g_L = C_val / tau_i.clamp(min=0.01)
+        # E_L = V_i_rest (per-neuron, from flyvis resting potentials)
+        # Scale from flyvis arbitrary units to mV range
+        E_L = V_i_rest * 20.0 - 65.0  # maps ~0 -> -65mV, ~1 -> -45mV
+
+        return cls(
+            C=_expand(C_val),
+            g_L=g_L,
+            E_L=E_L,
+            g_Na=_expand(d["g_Na"]),
+            E_Na=_expand(d["E_Na"]),
+            g_K=_expand(d["g_K"]),
+            E_K=_expand(d["E_K"]),
+            syn_tau=_expand(d["syn_tau"]),
+            syn_slope=_expand(d["syn_slope"]),
+            syn_v_half=_expand(d["syn_v_half"]),
+            I_bias=_expand(d["I_bias"]),
+            stim_scale=_expand(d["stim_scale"]),
+            edge_index=edge_index,
+            W=W,
+        )
