@@ -749,20 +749,20 @@ def plot_spiking_traces(
     fig, ax = style.figure(aspect=1.5)
     ax.plot(offset.T, linewidth=0.5, alpha=0.7, color=style.foreground)
 
-    # One red stimulus trace at the bottom
+    # One red stimulus trace at the bottom — larger amplitude, closer to traces
     if stimulus.shape[0] > 0:
         stim_trace = stimulus[0]
-        stim_min = offset.min() - 60.0
+        stim_min = offset.min() - 30.0
         stim_range = max(stim_trace.max() - stim_trace.min(), 1e-6)
-        stim_scaled = (stim_trace - stim_trace.min()) / stim_range * 30.0 + stim_min
+        stim_scaled = (stim_trace - stim_trace.min()) / stim_range * 50.0 + stim_min
         ax.plot(stim_scaled, linewidth=0.8, alpha=0.9, color='red')
 
-    style.xlabel(ax, 'time (substeps, dt={:.1f}ms)'.format(dt_ms), fontsize=16)
+    style.xlabel(ax, 'time (substeps, dt={:.1f}ms)'.format(dt_ms), fontsize=12)
     ax.set_yticks([i * step_v for i in range(n_sel)])
-    ax.set_yticklabels(type_labels, fontsize=6)
-    ax.tick_params(axis='x', labelsize=14)
+    ax.set_yticklabels(type_labels, fontsize=4)
+    ax.tick_params(axis='x', labelsize=8)
     ax.set_xlim([0, n_frames])
-    ax.set_ylim([offset.min() - 80, offset.max() + 20])
+    ax.set_ylim([offset.min() - 50, offset.max() + 20])
 
     plt.tight_layout()
     traces_path = os.path.join(output_path, 'spiking_traces.png') if os.path.isdir(output_path) else output_path
@@ -790,21 +790,22 @@ def plot_spiking_traces(
         ax2.plot(spike_frames, np.full_like(spike_frames, i), '|',
                  color=color, ms=2.0, mew=0.6, alpha=0.9, label=label)
 
-    # Red stimulus trace at bottom of raster
+    # Red stimulus trace at bottom of raster — smaller amplitude
     if stimulus.shape[0] > 0:
         stim_trace = stimulus[0]
-        stim_min = -5
+        stim_min = -3
         stim_range = max(stim_trace.max() - stim_trace.min(), 1e-6)
-        stim_scaled = (stim_trace - stim_trace.min()) / stim_range * 8.0 + stim_min
+        stim_scaled = (stim_trace - stim_trace.min()) / stim_range * 4.0 + stim_min
         ax2.plot(stim_scaled, linewidth=0.8, alpha=0.9, color='red', label='stimulus')
 
-    ax2.legend(loc='upper right', fontsize=10, framealpha=0.8)
-    style.xlabel(ax2, 'time (substeps, dt={:.1f}ms)'.format(dt_ms), fontsize=16)
+    # Legend with bigger spike markers
+    leg = ax2.legend(loc='upper right', fontsize=8, framealpha=0.8, markerscale=5.0)
+    style.xlabel(ax2, 'time (substeps, dt={:.1f}ms)'.format(dt_ms), fontsize=12)
     ax2.set_yticks(list(range(n_sel)))
-    ax2.set_yticklabels(type_labels, fontsize=6)
-    ax2.tick_params(axis='x', labelsize=14)
+    ax2.set_yticklabels(type_labels, fontsize=4)
+    ax2.tick_params(axis='x', labelsize=8)
     ax2.set_xlim([0, n_frames])
-    ax2.set_ylim([-8, n_sel + 1])
+    ax2.set_ylim([-5, n_sel + 1])
 
     plt.tight_layout()
     raster_path = os.path.join(output_path, 'spiking_raster.png') if os.path.isdir(output_path) else output_path.replace('traces', 'raster')

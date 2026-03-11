@@ -709,8 +709,8 @@ def data_generate_fly_AdEx_spiking(config, visualize=True, run_vizualized=0, sty
     else:
         target_frames = n_frames
 
-    # Record substep-level data for first 100 stimulus frames (for plotting)
-    plot_record_frames = 100
+    # Record substep-level data for first 200 stimulus frames (for plotting ~10000 substeps)
+    plot_record_frames = 200
     logger.info(f"generating spiking TRAIN data ({target_frames} frames from {len(train_sequences)} sequences)...")
     n_frames_train, train_plot_data = _run_spiking_generation(
         train_sequences, x, "train", target_frames,
