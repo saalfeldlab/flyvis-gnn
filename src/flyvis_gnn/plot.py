@@ -577,6 +577,7 @@ def plot_activity_traces(
     neuron_indices: np.ndarray | None = None,
     type_list: np.ndarray | None = None,
     stimulus: np.ndarray | None = None,
+    dt_ms: float = 0.5,
     dpi: int | None = None,
     title: str | None = None,
 ) -> np.ndarray:
@@ -584,21 +585,6 @@ def plot_activity_traces(
 
     If type_list is provided, picks one neuron per type (65 types) and labels
     them by name.  Otherwise falls back to random sampling of n_traces neurons.
-
-    Args:
-        activity: (n_neurons, n_frames) transposed voltage array.
-        output_path: where to save the figure.
-        n_traces: number of neurons to sample (ignored when type_list given).
-        max_frames: truncate x-axis at this frame count.
-        n_input_neurons: shown as annotation.
-        style: FigureStyle instance.
-        neuron_indices: pre-selected neuron indices; if None, random sample.
-        type_list: (n_neurons,) integer neuron type per neuron. If given,
-                   one neuron per unique type is selected and labelled.
-        stimulus: (n_input_neurons, n_frames) optional stimulus array; plotted
-                  as red trace at bottom of the figure.
-        dpi: override DPI for this figure; if None, use style default.
-        title: optional title for the figure.
 
     Returns:
         neuron_indices used (for reuse in paired plots).
@@ -641,7 +627,7 @@ def plot_activity_traces(
         stim_y = offset[0].min() - step_v * 1.5 + stim_mean * step_v * 5
         ax.plot(stim_y, linewidth=0.8, alpha=0.9, color='red')
 
-    style.xlabel(ax, 'time (frames)', fontsize=16)
+    style.xlabel(ax, 'frames', fontsize=10)
 
     if type_labels is not None:
         ax.set_yticks([i * step_v for i in range(len(neuron_indices))])
@@ -651,10 +637,16 @@ def plot_activity_traces(
         style.ylabel(ax, f'{len(neuron_indices)} / {n_neurons} neurons')
         ax.set_yticks([])
 
-    ax.tick_params(axis='x', labelsize=8)
+    ax.tick_params(axis='x', labelsize=6)
     ax.set_xlim([0, n_frames])
     y_bottom = (offset[0].min() - step_v * 3) if stimulus is not None else (offset[0].min() - 2)
     ax.set_ylim([y_bottom, offset[-1].max() + 2])
+
+    # Secondary x-axis: time in ms
+    ax2 = ax.twiny()
+    ax2.set_xlim([0, n_frames * dt_ms])
+    ax2.set_xlabel('time (ms)', fontsize=10)
+    ax2.tick_params(axis='x', labelsize=6)
     if title:
         ax.set_title(title, fontsize=style.font_size)
 

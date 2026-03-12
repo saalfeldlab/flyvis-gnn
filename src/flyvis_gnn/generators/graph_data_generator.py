@@ -1372,6 +1372,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
         style=fig_style,
         type_list=node_types_int,
         stimulus=stim_plot.T,
+        dt_ms=sim.delta_t,
         dpi=300,
     )
 
