@@ -645,7 +645,7 @@ def plot_activity_traces(
 
     if type_labels is not None:
         ax.set_yticks([i * step_v for i in range(len(neuron_indices))])
-        ax.set_yticklabels(type_labels, fontsize=5)
+        ax.set_yticklabels(type_labels, fontsize=3)
         style.ylabel(ax, '')
     else:
         style.ylabel(ax, f'{len(neuron_indices)} / {n_neurons} neurons')
