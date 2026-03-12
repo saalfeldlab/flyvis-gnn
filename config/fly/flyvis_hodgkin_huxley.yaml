@@ -21,7 +21,7 @@ simulation:
   seed: 42
   # HH-specific
   hh_substeps: 50        # Euler substeps per stimulus frame (sub_dt = 0.5/50 = 0.01ms)
-  hh_stim_scale: 15.0    # uA/cm^2 per unit stimulus
+  hh_stim_scale: 25.0    # uA/cm^2 per unit stimulus
   hh_I_bias: 0.0         # uA/cm^2 — no spontaneous spiking, only stimulus-driven
   hh_w_scale: 5.0        # global W multiplier (connectome weights calibrated for graded model)
 graph_model:
