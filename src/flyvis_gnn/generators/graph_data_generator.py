@@ -1397,7 +1397,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
     trace_indices = plot_activity_traces(
         activity=activity_plot.T,
         output_path=graphs_data_path(config.dataset, trace_name),
-        max_frames=window_frames,
+        max_frames=0,  # show all available frames
         n_input_neurons=sim.n_input_neurons,
         style=fig_style,
         type_list=node_types_int,

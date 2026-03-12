@@ -634,9 +634,8 @@ def plot_activity_traces(
         stim_mean = stimulus.mean(axis=0)
         if max_frames > 0:
             stim_mean = stim_mean[:min(len(stim_mean), max_frames)]
-        stim_y = offset[0].min() - step_v * 1.5 + stim_mean * step_v
-        ax.plot(stim_y, linewidth=0.8, alpha=0.9, color='red', label='stimulus')
-        ax.legend(loc='lower right', fontsize=10, framealpha=0.7)
+        stim_y = offset[0].min() - step_v * 1.5 + stim_mean * step_v * 5
+        ax.plot(stim_y, linewidth=0.8, alpha=0.9, color='red')
 
     style.xlabel(ax, 'time (frames)', fontsize=16)
 
