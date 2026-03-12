@@ -419,10 +419,10 @@ HH_DEFAULTS = dict(
     # Synaptic coupling (continuous, voltage-dependent)
     syn_tau=5.0,         # ms — synaptic activation time constant
     syn_slope=5.0,       # mV — sigmoid slope for presynaptic activation
-    syn_v_half=-20.0,    # mV — sigmoid midpoint (threshold for synaptic activation)
+    syn_v_half=-45.0,    # mV — sigmoid midpoint (allows subthreshold transmission)
     # External input
-    I_bias=0.0,          # uA/cm^2 — constant bias current
-    stim_scale=10.0,     # uA/cm^2 per unit stimulus
+    I_bias=3.0,          # uA/cm^2 — tonic drive (depolarises to ~-44mV, subthreshold)
+    stim_scale=50.0,     # uA/cm^2 per unit stimulus
 )
 
 

@@ -20,8 +20,8 @@ simulation:
   seed: 42
   # HH-specific
   hh_substeps: 50        # Euler substeps per stimulus frame (sub_dt = 0.5/50 = 0.01ms)
-  hh_stim_scale: 10.0    # uA/cm^2 per unit stimulus
-  hh_I_bias: 0.0         # uA/cm^2 — tonic drive
+  hh_stim_scale: 50.0    # uA/cm^2 per unit stimulus
+  hh_I_bias: 3.0         # uA/cm^2 — tonic drive (depolarises to ~-44mV, subthreshold)
 graph_model:
   signal_model_name: flyvis_hodgkin_huxley
   prediction: first_derivative
