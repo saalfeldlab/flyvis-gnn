@@ -598,7 +598,7 @@ def plot_activity_traces(
     n_traces = min(n_traces, n_neurons)
     if neuron_indices is None:
         neuron_indices = np.sort(np.random.choice(n_neurons, n_traces, replace=False))
-    sampled = activity[neuron_indices]
+    sampled = activity[neuron_indices] / 10.0  # scale down so spikes don't dominate
     offset = sampled + 2 * np.arange(len(neuron_indices))[:, None]
 
     fig, ax = style.figure(aspect=1.5)

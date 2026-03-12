@@ -23,7 +23,7 @@ simulation:
   hh_substeps: 50        # Euler substeps per stimulus frame (sub_dt = 0.5/50 = 0.01ms)
   hh_stim_scale: 50.0    # uA/cm^2 per unit stimulus
   hh_I_bias: 3.0         # uA/cm^2 — tonic drive (depolarises to ~-44mV, subthreshold)
-  hh_w_scale: 2.0        # global W multiplier (connectome weights calibrated for graded model)
+  hh_w_scale: 5.0        # global W multiplier (connectome weights calibrated for graded model)
 graph_model:
   signal_model_name: flyvis_hodgkin_huxley
   prediction: first_derivative
