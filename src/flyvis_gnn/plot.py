@@ -603,7 +603,11 @@ def plot_activity_traces(
     Returns:
         neuron_indices used (for reuse in paired plots).
     """
-    n_neurons, n_frames = activity.shape
+    n_neurons, n_frames_raw = activity.shape
+    if max_frames > 0:
+        n_frames_raw = min(n_frames_raw, max_frames)
+    activity = activity[:, :n_frames_raw]
+    n_frames = n_frames_raw
 
     # Select one neuron per type when type_list is provided
     type_labels = None
@@ -648,7 +652,7 @@ def plot_activity_traces(
         ax.set_yticks([])
 
     ax.tick_params(axis='x', labelsize=8)
-    ax.set_xlim([0, min(n_frames, max_frames)])
+    ax.set_xlim([0, n_frames])
     y_bottom = (offset[0].min() - step_v * 3) if stimulus is not None else (offset[0].min() - 2)
     ax.set_ylim([y_bottom, offset[-1].max() + 2])
     if title:
