@@ -220,8 +220,9 @@ def _run_ode_generation(stimulus_sequences, net, pde, x, edge_index, initial_sta
         sintel_frame_idx = 0
         davis_frame_idx = 0
 
-    # [HH DEBUG] Collect traces for first sequence diagnostic plot
+    # [HH DEBUG] Collect traces for first N sequences diagnostic plot
     _hh_debug_buffers = None
+    _hh_debug_n_seqs = 5  # capture 5 sequences (~350 frames) for debug plot
     if hasattr(pde, 'step_gates'):
         _hh_debug_buffers = {'volt': [], 'stim': [], 'm': [], 'h': [], 'n': []}
 
@@ -444,8 +445,8 @@ def _run_ode_generation(stimulus_sequences, net, pde, x, edge_index, initial_sta
                                 f"ALL volt: [{x.voltage.min():.1f},{x.voltage.max():.1f}]  n_retina={_retina_mask.sum()}"
                             )
 
-                    # [HH DEBUG] Collect traces for first sequence
-                    if _hh_debug_buffers is not None and data_idx == 0 and pass_num == 0:
+                    # [HH DEBUG] Collect traces for first N sequences
+                    if _hh_debug_buffers is not None and data_idx < _hh_debug_n_seqs and pass_num == 0:
                         _hh_debug_buffers['volt'].append(x.voltage.cpu().numpy().copy())
                         _hh_debug_buffers['stim'].append(x.stimulus.cpu().numpy().copy())
                         _hh_debug_buffers['m'].append(x.hh_m.cpu().numpy().copy())
@@ -494,7 +495,7 @@ def _run_ode_generation(stimulus_sequences, net, pde, x, edge_index, initial_sta
                     if it >= target_frames:
                         break
                 # [HH DEBUG] Save diagnostic plot after first sequence
-                if _hh_debug_buffers is not None and data_idx == 0 and pass_num == 0 and _hh_debug_buffers['volt']:
+                if _hh_debug_buffers is not None and data_idx == _hh_debug_n_seqs - 1 and pass_num == 0 and _hh_debug_buffers['volt']:
                     logger.info(f"[HH DEBUG] saving hh_debug_seq0.png ({len(_hh_debug_buffers['volt'])} frames)")
                     # Build HH params dict for current decomposition plot
                     _hh_plot_params = None
@@ -1403,7 +1404,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
         stimulus=stim_plot.T,
         type_list=node_types_int,
         output_path=graphs_data_path(config.dataset, 'retina_traces.png'),
-        max_frames=10000,
+        max_frames=400,  # ~same range as hh_debug_seq0 (5 seqs x ~70 frames)
         dt_ms=sim.delta_t,
         style=fig_style,
     )

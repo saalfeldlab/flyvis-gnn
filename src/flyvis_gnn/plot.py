@@ -820,6 +820,7 @@ def plot_hh_debug(
         ax.plot(t_axis, stimulus_history[:, nidx], linewidth=0.8, color=colors[i], label=name)
     ax.set_ylabel('x.stimulus')
     ax.set_title('Stimulus injected into R1-R8')
+    ax.set_ylim([0.0, 1.0])
     ax.legend(fontsize=6, ncol=4, loc='upper right')
     ax.grid(True, alpha=0.3)
 
