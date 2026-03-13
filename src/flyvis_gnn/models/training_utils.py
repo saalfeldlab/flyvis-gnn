@@ -38,7 +38,7 @@ def determine_load_fields(config):
 
 def load_flyvis_data(dataset_name, split='train', fields=None, device=None,
                      training_selected_neurons=False, selected_neuron_ids=None,
-                     measurement_noise_level=0.0):
+                     measurement_noise_level=0.0, derivative_target='noisy'):
     """Load NeuronTimeSeries + derivative targets for a given split.
 
     Handles backwards compatibility: falls back to x_list_0 / y_list_0
@@ -52,6 +52,10 @@ def load_flyvis_data(dataset_name, split='train', fields=None, device=None,
         training_selected_neurons: if True, subset neurons
         selected_neuron_ids: list of neuron indices to keep
         measurement_noise_level: if > 0, load noisy_y_list instead of y_list
+        derivative_target: 'noisy' (default) | 'clean' | 'wiener'
+            - 'noisy': noisy_y_list if measurement_noise_level > 0, else y_list
+            - 'clean': always y_list (ground truth derivatives)
+            - 'wiener': wiener_y_list (filtered by denoise.py)
 
     Returns:
         x_ts: NeuronTimeSeries on device
@@ -61,8 +65,13 @@ def load_flyvis_data(dataset_name, split='train', fields=None, device=None,
     split_name = f'x_list_{split}'
     path = graphs_data_path(dataset_name, split_name)
 
-    # Choose derivative target: noisy or clean
-    y_prefix = 'noisy_y_list' if measurement_noise_level > 0 else 'y_list'
+    # Choose derivative target based on derivative_target setting
+    if derivative_target == 'wiener':
+        y_prefix = 'wiener_y_list'
+    elif derivative_target == 'clean':
+        y_prefix = 'y_list'
+    else:  # 'noisy' (default)
+        y_prefix = 'noisy_y_list' if measurement_noise_level > 0 else 'y_list'
 
     if os.path.exists(path):
         x_ts = load_simulation_data(path, fields=fields).to(device)

@@ -53,6 +53,14 @@ if __name__ == "__main__":
             'flyvis_62_1_id_006', 'flyvis_62_1_id_029', 'flyvis_62_1_id_001', 'flyvis_62_1_id_000', 'flyvis_62_1_id_037',
             'flyvis_62_1_id_011', 'flyvis_62_1_id_036', 'flyvis_62_1_id_003', 'flyvis_62_1_id_041', 'flyvis_62_1_id_049',
         ],
+        'flyvis_denoise_sweep': [
+            'flyvis_noise_005_010_dn_01',
+            'flyvis_noise_005_010_dn_02',
+            'flyvis_noise_005_010_dn_04',
+            'flyvis_noise_005_010_dn_06',
+            'flyvis_noise_005_010_dn_08',
+            'flyvis_noise_005_010_dn_10',
+        ],
     }
 
     if args.option is not None:

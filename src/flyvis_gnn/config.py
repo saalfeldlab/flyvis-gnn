@@ -253,6 +253,20 @@ class SimulationConfig(BaseModel):
     noise_model_level: float = 0.0  # process noise added during dynamics simulation
     measurement_noise_level: float = 0.0  # observation noise saved separately in noise.zarr
     derivative_smoothing_window: int = 1  # temporal smoothing window for noisy derivatives (1 = no smoothing)
+    derivative_target: str = "noisy"  # 'clean' | 'noisy' | 'wiener' — which y_list to load for training
+
+    # Wiener denoising configuration
+    filter_algorithm: str = "wiener"  # 'wiener' | 'wavelet' | 'spectral_subtraction'
+    filter_noise_fraction: float = 0.2  # aggressiveness of noise removal (0=none, 1=full)
+    filter_noise_spectrum: str = "analytical"  # 'analytical' (measurement noise only) | 'empirical' (from residuals)
+    filter_spectrum_smoothing: int = 10  # smooth S_signal periodogram over this many frequency bins
+    filter_h_floor: float = 0.05  # minimum filter gain (prevents over-smoothing)
+    filter_per_neuron_type: bool = True  # estimate spectrum per neuron type (65) vs per neuron (13741)
+    filter_save_plots: bool = True  # save diagnostic plots (spectra, time-domain comparison, metrics)
+    # Wavelet-specific
+    filter_wavelet_name: str = "db4"  # wavelet family ('db4', 'sym6', 'coif3')
+    filter_wavelet_level: int = 0  # decomposition levels (0 = auto)
+    filter_wavelet_threshold: str = "soft"  # 'soft' | 'hard'
     calcium_saturation_kd: float = 1.0  # for nonlinear saturation models
     calcium_num_compartments: int = 1
     calcium_down_sample: int = 1  # down-sample [Ca] time series by this factor
