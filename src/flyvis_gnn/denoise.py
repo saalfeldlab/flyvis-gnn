@@ -26,7 +26,6 @@ Config fields (in simulation: section):
     filter_wavelet_threshold:   'soft' | 'hard'
 """
 
-import logging
 import os
 
 import matplotlib.pyplot as plt
@@ -57,9 +56,6 @@ def wiener_filter_derivatives(config, model_checkpoint, device='cuda', split='tr
     """
     from flyvis_gnn.utils import graphs_data_path
     from flyvis_gnn.zarr_io import ZarrArrayWriter, load_raw_array, load_simulation_data
-    from flyvis_gnn.models.training_utils import (
-        build_model, determine_load_fields, load_flyvis_data,
-    )
 
     sim = config.simulation
     dt = sim.delta_t
@@ -172,11 +168,12 @@ def wiener_filter_derivatives(config, model_checkpoint, device='cuda', split='tr
 
 def _generate_predictions(config, model_checkpoint, device, split, T, N):
     """Run the trained model on all frames and return predictions."""
-    from flyvis_gnn.utils import graphs_data_path
-    from flyvis_gnn.zarr_io import load_simulation_data
     from flyvis_gnn.models.training_utils import (
-        build_model, determine_load_fields, load_flyvis_data,
+        build_model,
+        determine_load_fields,
+        load_flyvis_data,
     )
+    from flyvis_gnn.utils import graphs_data_path
 
     sim = config.simulation
     sigma_meas = sim.measurement_noise_level
@@ -487,7 +484,7 @@ def main():
     results = wiener_filter_derivatives(
         config, args.checkpoint, device=args.device, split=args.split)
 
-    print(f"\nResults:")
+    print("\nResults:")
     for k, v in results.items():
         print(f"  {k}: {v}")
 

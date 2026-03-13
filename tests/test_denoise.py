@@ -3,9 +3,10 @@
 All tests are CPU-only, no disk I/O, no model checkpoints.
 They exercise the core filter math to verify correctness.
 """
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
-from types import SimpleNamespace
 
 from flyvis_gnn.denoise import (
     _analytical_noise_spectrum,
@@ -14,7 +15,6 @@ from flyvis_gnn.denoise import (
     _estimate_signal_spectrum,
     _smooth_spectrum,
 )
-
 
 pytestmark = pytest.mark.tier1
 
