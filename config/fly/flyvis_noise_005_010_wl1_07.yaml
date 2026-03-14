@@ -1,5 +1,5 @@
 description: "flyvis noise_005_010 W_L1 sweep: coeff_W_L1=5e-04, annealing on, 3 epochs"
-dataset: flyvis_noise_005_010_wl1_07
+dataset: flyvis_noise_005_010
 simulation:
   connectivity_file: to be specified
   adjacency_matrix: ""
