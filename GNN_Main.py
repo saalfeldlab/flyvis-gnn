@@ -67,6 +67,26 @@ if __name__ == "__main__":
             'flyvis_noise_005_010_dn_30',
             'flyvis_noise_005_010_dn_50',
         ],
+        'flyvis_wavelet_sweep': [
+            'flyvis_noise_005_010_wv_01',
+            'flyvis_noise_005_010_wv_02',
+            'flyvis_noise_005_010_wv_04',
+            'flyvis_noise_005_010_wv_06',
+            'flyvis_noise_005_010_wv_08',
+            'flyvis_noise_005_010_wv_10',
+        ],
+        'flyvis_wavelet_sweep_fine': [
+            'flyvis_noise_005_010_wv_015',
+            'flyvis_noise_005_010_wv_025',
+        ],
+        'flyvis_spectral_sweep': [
+            'flyvis_noise_005_010_ss_01',
+            'flyvis_noise_005_010_ss_02',
+            'flyvis_noise_005_010_ss_04',
+            'flyvis_noise_005_010_ss_06',
+            'flyvis_noise_005_010_ss_08',
+            'flyvis_noise_005_010_ss_10',
+        ],
         'flyvis_wl1_sweep': [
             'flyvis_noise_005_010_wl1_01',
             'flyvis_noise_005_010_wl1_02',
