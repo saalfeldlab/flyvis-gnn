@@ -63,5 +63,6 @@ training:
   coeff_f_theta_weight_L2: 0
   coeff_W_L1: 0
   coeff_W_L2: 0
+  regul_annealing_rate: 0
   w_init_mode: "randn_scaled"
   seed: 42

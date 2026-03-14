@@ -65,5 +65,5 @@ training:
   coeff_W_L1: 5.0e-04
   coeff_W_L2: 1.5e-06
   w_init_mode: "randn_scaled"
-  regul_annealing_rate: 0.5
+  regul_annealing_rate: 0
   seed: 42

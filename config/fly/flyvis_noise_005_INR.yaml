@@ -79,7 +79,7 @@ training:
   coeff_W_L1: 5.0e-05
   coeff_W_L1_rate: 0.5
   w_init_mode: randn_scaled
-  regul_annealing_rate: 0.5
+  regul_annealing_rate: 0
   seed: 42
 claude:
   n_epochs: 3
