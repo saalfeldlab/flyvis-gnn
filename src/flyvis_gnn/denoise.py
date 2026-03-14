@@ -141,21 +141,41 @@ def wiener_filter_derivatives(config, model_checkpoint, device='cuda', split='tr
     writer.finalize()
     logger.info(f"saved filtered targets to {out_path}")
 
-    # --- Diagnostic plots ---
+    # --- Diagnostic plots and summary ---
     if sim.filter_save_plots:
-        plot_dir = os.path.join(log_dir, 'wiener_diagnostics')
-        os.makedirs(plot_dir, exist_ok=True)
+        results_dir = os.path.join(log_dir, 'results')
+        os.makedirs(results_dir, exist_ok=True)
+
+        # Per-type R² (needed for summary)
+        r2_typ_n, r2_typ_f = [], []
+        for typ in unique_types:
+            m = neuron_types == typ
+            ss_n = np.sum((y_noisy[:, m, :] - y_clean[:, m, :]) ** 2)
+            ss_f = np.sum((y_filtered[:, m, :] - y_clean[:, m, :]) ** 2)
+            ss_t = np.sum((y_clean[:, m, :] - np.mean(y_clean[:, m, :])) ** 2)
+            r2_typ_n.append(1 - ss_n / (ss_t + 1e-30))
+            r2_typ_f.append(1 - ss_f / (ss_t + 1e-30))
+
+        # Save text summary
+        _save_summary_txt(
+            algorithm=algorithm, fraction=fraction, h_floor=h_floor,
+            metrics=metrics,
+            r2_per_type_noisy=np.array(r2_typ_n),
+            r2_per_type_filtered=np.array(r2_typ_f),
+            results_dir=results_dir,
+        )
+
+        # Save 2-panel diagnostic plot
+        S_signal_mean = np.mean(S_signal_per_neuron, axis=0)
         _plot_diagnostics(
             freqs=freqs,
-            S_signal_per_neuron=S_signal_per_neuron,
+            S_signal_mean=S_signal_mean,
             S_noise_analytical=S_noise_analytical,
             S_residual_mean=S_residual_mean,
-            S_noisy_per_neuron=S_noisy_per_neuron,
             y_noisy=y_noisy, y_filtered=y_filtered,
-            y_clean=y_clean, y_pred=y_pred,
-            neuron_types=neuron_types, unique_types=unique_types,
+            y_clean=y_clean,
             fraction=fraction, algorithm=algorithm, h_floor=h_floor,
-            metrics=metrics, plot_dir=plot_dir, dt=dt,
+            results_dir=results_dir, dt=dt,
         )
 
     metrics['out_path'] = str(out_path)
@@ -311,73 +331,53 @@ def _compute_metrics(y_noisy, y_filtered, y_pred, y_clean):
 
 
 # ------------------------------------------------------------------ #
-#  Diagnostic plots
+#  Diagnostic outputs
 # ------------------------------------------------------------------ #
 
-def _plot_diagnostics(
-    freqs, S_signal_per_neuron, S_noise_analytical, S_residual_mean,
-    S_noisy_per_neuron, y_noisy, y_filtered, y_clean, y_pred,
-    neuron_types, unique_types, fraction, algorithm, h_floor,
-    metrics, plot_dir, dt,
+def _save_summary_txt(
+    algorithm, fraction, h_floor, metrics,
+    r2_per_type_noisy, r2_per_type_filtered, results_dir,
 ):
-    """Six-panel diagnostic figure."""
-    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+    """Write a human-readable denoising summary to results/denoising_summary.txt."""
+    delta = r2_per_type_filtered - r2_per_type_noisy
+    n_improved = int((delta > 0).sum())
+    n_types = len(r2_per_type_noisy)
 
-    S_signal_mean = np.mean(S_signal_per_neuron, axis=0)
-    S_noisy_mean = np.mean(S_noisy_per_neuron, axis=0)
+    lines = [
+        f"Algorithm: {algorithm}",
+        f"Noise fraction: {fraction}",
+        f"H floor: {h_floor}",
+        "",
+        f"MSE noisy->clean:    {metrics['mse_noisy']:.6f}",
+        f"MSE filtered->clean: {metrics['mse_filtered']:.6f}",
+        f"MSE reduction:       {(1 - metrics['mse_filtered']/metrics['mse_noisy'])*100:.1f}%",
+        "",
+        f"R2 noisy->clean:     {metrics['r2_noisy']:.4f}",
+        f"R2 filtered->clean:  {metrics['r2_filtered']:.4f}",
+        f"R2 improvement:      {metrics['r2_filtered'] - metrics['r2_noisy']:.4f}",
+        "",
+        f"Per-type R2 (N={n_types}):",
+        f"  noisy    mean={np.mean(r2_per_type_noisy):.4f}  median={np.median(r2_per_type_noisy):.4f}",
+        f"  filtered mean={np.mean(r2_per_type_filtered):.4f}  median={np.median(r2_per_type_filtered):.4f}",
+        f"  types improved: {n_improved}/{n_types}",
+    ]
 
-    # Panel 1 — Power spectra
-    ax = axes[0, 0]
-    ax.semilogy(freqs[1:], S_noisy_mean[1:], alpha=0.5,
-                label='S_noisy (data)', color='gray')
-    ax.semilogy(freqs[1:], S_signal_mean[1:],
-                label='S_signal (model pred)', color='blue')
-    ax.semilogy(freqs[1:], S_noise_analytical[1:],
-                label='S_noise (analytical)', color='red', ls='--')
-    ax.semilogy(freqs[1:], S_residual_mean[1:],
-                label='S_residual (empirical)', color='orange', ls=':')
-    ax.set_xlabel('Frequency (Hz)')
-    ax.set_ylabel('PSD')
-    ax.set_title('Power spectra (mean over neurons)')
-    ax.legend(fontsize=7)
+    fname = os.path.join(results_dir, 'denoising_summary.txt')
+    with open(fname, 'w') as f:
+        f.write('\n'.join(lines) + '\n')
+    logger.info(f"saved denoising summary: {fname}")
 
-    # Panel 2 — Filter H(f)
-    ax = axes[0, 1]
-    S_noi_plot = fraction * S_noise_analytical
-    H_mean = S_signal_mean / (S_signal_mean + S_noi_plot + 1e-30)
-    H_mean = np.maximum(H_mean, h_floor)
-    ax.plot(freqs[1:], H_mean[1:], color='blue')
-    ax.axhline(y=h_floor, color='red', ls='--', alpha=0.5,
-               label=f'floor={h_floor}')
-    cross_idx = np.argmin(np.abs(S_signal_mean[1:] - S_noi_plot[1:]))
-    if cross_idx > 0:
-        ax.axvline(x=freqs[cross_idx + 1], color='green', ls=':', alpha=0.5,
-                   label=f'crossover={freqs[cross_idx+1]:.1f} Hz')
-    ax.set_xlabel('Frequency (Hz)')
-    ax.set_ylabel('Filter gain H(f)')
-    ax.set_title(f'{algorithm} (fraction={fraction})')
-    ax.set_ylim([-0.05, 1.05])
-    ax.legend(fontsize=7)
 
-    # Panel 3 — Time-domain
-    ax = axes[0, 2]
-    T = y_noisy.shape[0]
-    t_show = min(2000, T)
-    n_ex = 0  # example neuron
-    t_ax = np.arange(t_show) * dt
-    ax.plot(t_ax, y_noisy[:t_show, n_ex, 0], alpha=0.3, color='gray',
-            lw=0.5, label='noisy')
-    ax.plot(t_ax, y_filtered[:t_show, n_ex, 0], color='blue',
-            lw=0.8, label='filtered')
-    ax.plot(t_ax, y_clean[:t_show, n_ex, 0], color='green',
-            lw=0.8, label='clean (GT)')
-    ax.set_xlabel('Time (s)')
-    ax.set_ylabel('dV/dt')
-    ax.set_title(f'Time-domain (neuron {n_ex})')
-    ax.legend(fontsize=7)
+def _plot_diagnostics(
+    freqs, S_signal_mean, S_noise_analytical, S_residual_mean,
+    y_noisy, y_filtered, y_clean,
+    fraction, algorithm, h_floor, results_dir, dt,
+):
+    """Two-panel diagnostic figure: noise model validation + time-domain."""
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
-    # Panel 4 — Noise model validation
-    ax = axes[1, 0]
+    # Panel 1 — Noise model validation
+    ax = axes[0]
     ax.semilogy(freqs[1:], S_residual_mean[1:],
                 label='|FFT(residual)|^2', color='orange')
     ax.semilogy(freqs[1:], S_noise_analytical[1:],
@@ -390,68 +390,28 @@ def _plot_diagnostics(
     ax.set_title('Noise model validation')
     ax.legend(fontsize=7)
 
-    # Panel 5 — Per-type R²
-    ax = axes[1, 1]
-    r2_typ_n, r2_typ_f = [], []
-    for typ in unique_types:
-        m = neuron_types == typ
-        ss_n = np.sum((y_noisy[:, m, :] - y_clean[:, m, :]) ** 2)
-        ss_f = np.sum((y_filtered[:, m, :] - y_clean[:, m, :]) ** 2)
-        ss_t = np.sum((y_clean[:, m, :] - np.mean(y_clean[:, m, :])) ** 2)
-        r2_typ_n.append(1 - ss_n / (ss_t + 1e-30))
-        r2_typ_f.append(1 - ss_f / (ss_t + 1e-30))
-    x_pos = np.arange(len(unique_types))
-    ax.bar(x_pos - 0.15, r2_typ_n, 0.3, alpha=0.6,
-           label='noisy', color='gray')
-    ax.bar(x_pos + 0.15, r2_typ_f, 0.3, alpha=0.8,
-           label='filtered', color='blue')
-    ax.set_xlabel('Neuron type')
-    ax.set_ylabel('R^2 vs GT')
-    ax.set_title(f'Quality by type (N={len(unique_types)})')
-    if len(unique_types) <= 20:
-        ax.set_xticks(x_pos)
+    # Panel 2 — Time-domain
+    ax = axes[1]
+    T = y_noisy.shape[0]
+    t_show = min(2000, T)
+    n_ex = 0
+    t_ax = np.arange(t_show) * dt
+    ax.plot(t_ax, y_noisy[:t_show, n_ex, 0], alpha=0.3, color='gray',
+            lw=0.5, label='noisy')
+    ax.plot(t_ax, y_filtered[:t_show, n_ex, 0], color='blue',
+            lw=0.8, label='filtered')
+    ax.plot(t_ax, y_clean[:t_show, n_ex, 0], color='green',
+            lw=0.8, label='clean (GT)')
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel('dV/dt')
+    ax.set_title(f'Time-domain (neuron {n_ex}) — {algorithm} f={fraction}')
     ax.legend(fontsize=7)
 
-    # Panel 6 — Summary text
-    ax = axes[1, 2]
-    ax.axis('off')
-    txt = (
-        f"Algorithm: {algorithm}\n"
-        f"Noise fraction: {fraction}\n"
-        f"H floor: {h_floor}\n\n"
-        f"MSE noisy->clean:    {metrics['mse_noisy']:.6f}\n"
-        f"MSE filtered->clean: {metrics['mse_filtered']:.6f}\n"
-        f"MSE reduction:       "
-        f"{(1 - metrics['mse_filtered']/metrics['mse_noisy'])*100:.1f}%\n\n"
-        f"R2 noisy->clean:    {metrics['r2_noisy']:.4f}\n"
-        f"R2 filtered->clean: {metrics['r2_filtered']:.4f}\n"
-        f"R2 improvement:     "
-        f"{metrics['r2_filtered'] - metrics['r2_noisy']:.4f}"
-    )
-    ax.text(0.1, 0.9, txt, transform=ax.transAxes, fontsize=11,
-            va='top', fontfamily='monospace',
-            bbox=dict(boxstyle='round', fc='lightyellow', alpha=0.8))
-    ax.set_title('Summary')
-
     plt.tight_layout()
-    fname = os.path.join(
-        plot_dir, f'wiener_diagnostics_{algorithm}_f{fraction}.png')
+    fname = os.path.join(results_dir, f'denoising_{algorithm}_f{fraction}.png')
     plt.savefig(fname, dpi=150, bbox_inches='tight')
     plt.close()
     logger.info(f"saved diagnostic plot: {fname}")
-
-    # Save spectra for later analysis
-    np.savez(
-        os.path.join(plot_dir, f'spectra_{algorithm}_f{fraction}.npz'),
-        freqs=freqs,
-        S_signal_mean=S_signal_mean,
-        S_noise_analytical=S_noise_analytical,
-        S_residual_mean=S_residual_mean,
-        S_noisy_mean=S_noisy_mean,
-        H_mean=H_mean,
-        r2_per_type_noisy=np.array(r2_typ_n),
-        r2_per_type_filtered=np.array(r2_typ_f),
-    )
 
 
 # ------------------------------------------------------------------ #
