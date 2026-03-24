@@ -29,7 +29,7 @@
 # $I_i(t)$ the visual input, and
 # $\xi_i(t) \sim \mathcal{N}(0,1)$ is independent Gaussian noise scaled
 # by $\sigma$. The noise term $\sigma\,\xi_i(t)$ models intrinsic stochasticity in the
-# membrane dynamics (e.g. channel noise, synaptic variability). 
+# membrane dynamics (e.g. channel noise, synaptic variability).
 #
 
 # Unlike measurement noise added post hoc, this intrinsic

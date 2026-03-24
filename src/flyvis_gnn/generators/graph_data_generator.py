@@ -964,7 +964,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
             net, device=device, overrides=hh_overrides or None)
     else:
         ode_params = FlyVisODEParams.from_flyvis_network(net, device=device)
-    edge_index = ode_params.edge_index
+    edge_index = ode_params.edge_index.to(device)
 
     if sim.n_extra_null_edges > 0:
         logger.info(f"adding {sim.n_extra_null_edges} extra null edges (mode={sim.null_edges_mode})...")
@@ -1115,7 +1115,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
     X1 = torch.cat((X1, pos[torch.randperm(pos.size(0))]), dim=0)
 
     state = net.steady_state(t_pre=2.0, dt=sim.delta_t, batch_size=1)
-    initial_state = state.nodes.activity.squeeze()
+    initial_state = state.nodes.activity.squeeze().to(device)
     n_neurons = len(initial_state)
 
     sequences = stimulus_dataset[0]["lum"]
@@ -1147,8 +1147,8 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
         x = NeuronState(
             index=torch.arange(n_neurons, dtype=torch.long, device=device),
             pos=X1,
-            voltage=initial_state,
-            stimulus=net.stimulus().squeeze(),
+            voltage=initial_state.to(device),
+            stimulus=net.stimulus().squeeze().to(device),
             group_type=torch.tensor(grouped_types, dtype=torch.long, device=device),
             neuron_type=torch.tensor(node_types_int, dtype=torch.long, device=device),
             calcium=_init_calcium,
