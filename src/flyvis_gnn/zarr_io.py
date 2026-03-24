@@ -149,13 +149,17 @@ class ZarrSimulationWriterV3:
         path: str | Path,
         n_neurons: int,
         time_chunks: int = 2000,
+        save_calcium: bool = False,
     ):
         self.path = Path(path)
         self.n_neurons = n_neurons
         self.time_chunks = time_chunks
+        self.save_calcium = save_calcium
 
+        self._fields = [f for f in _DYNAMIC_FIELDS
+                        if save_calcium or f not in ('calcium', 'fluorescence')]
         self._static_saved = False
-        self._buffers: dict[str, list[np.ndarray]] = {f: [] for f in _DYNAMIC_FIELDS}
+        self._buffers: dict[str, list[np.ndarray]] = {f: [] for f in self._fields}
         self._stores: dict[str, ts.TensorStore] = {}
         self._total_frames = 0
         self._dynamic_initialized = False
@@ -202,7 +206,7 @@ class ZarrSimulationWriterV3:
         """Create zarr stores for dynamic fields."""
         initial_cap = max(self.time_chunks * 10, 1000)
 
-        for name in _DYNAMIC_FIELDS:
+        for name in self._fields:
             zarr_path = self.path / f'{name}.zarr'
             if zarr_path.exists():
                 import shutil
@@ -235,8 +239,9 @@ class ZarrSimulationWriterV3:
 
         self._buffers['voltage'].append(to_numpy(state.voltage).astype(np.float32))
         self._buffers['stimulus'].append(to_numpy(state.stimulus).astype(np.float32))
-        self._buffers['calcium'].append(to_numpy(state.calcium).astype(np.float32))
-        self._buffers['fluorescence'].append(to_numpy(state.fluorescence).astype(np.float32))
+        if self.save_calcium:
+            self._buffers['calcium'].append(to_numpy(state.calcium).astype(np.float32))
+            self._buffers['fluorescence'].append(to_numpy(state.fluorescence).astype(np.float32))
         noise_val = getattr(state, 'noise', None)
         self._buffers['noise'].append(
             to_numpy(noise_val).astype(np.float32) if noise_val is not None

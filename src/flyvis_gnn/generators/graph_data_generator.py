@@ -702,6 +702,7 @@ def data_generate_fly_AdEx_spiking(config, visualize=True, run_vizualized=0, sty
             path=graphs_data_path(config.dataset, f"x_list_{split_name}"),
             n_neurons=n_neurons,
             time_chunks=2000,
+            save_calcium=sim.save_calcium,
         )
         y_writer = ZarrArrayWriter(
             path=graphs_data_path(config.dataset, f"y_list_{split_name}"),
@@ -1233,6 +1234,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
         path=graphs_data_path(config.dataset, "x_list_train"),
         n_neurons=n_neurons,
         time_chunks=2000,
+        save_calcium=sim.save_calcium,
     )
     y_writer = ZarrArrayWriter(
         path=graphs_data_path(config.dataset, "y_list_train"),
@@ -1283,6 +1285,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
         path=graphs_data_path(config.dataset, "x_list_test"),
         n_neurons=n_neurons,
         time_chunks=2000,
+        save_calcium=sim.save_calcium,
     )
     y_writer = ZarrArrayWriter(
         path=graphs_data_path(config.dataset, "y_list_test"),
