@@ -29,7 +29,7 @@
 # $I_i(t)$ the visual input, and
 # $\xi_i(t) \sim \mathcal{N}(0,1)$ is independent Gaussian noise scaled
 # by $\sigma$. The noise term $\sigma\,\xi_i(t)$ models intrinsic stochasticity in the
-# membrane dynamics (e.g. channel noise, synaptic variability). 
+# membrane dynamics (e.g. channel noise, synaptic variability).
 #
 
 # Unlike measurement noise added post hoc, this intrinsic
@@ -264,21 +264,21 @@ if os.path.isfile(stimulus_video_path):
 
 # %%
 #| lightbox: true
-display_image(f"{graphs_dirs['flyvis_noise_free']}/activity_traces.png", width=850)
+display_image(f"{graphs_dirs['flyvis_noise_free']}/activity.png", width=850)
 
 # %% [markdown]
 # ### Low noise ($\sigma = 0.05$)
 
 # %%
 #| lightbox: true
-display_image(f"{graphs_dirs['flyvis_noise_005']}/activity_traces.png", width=850)
+display_image(f"{graphs_dirs['flyvis_noise_005']}/activity.png", width=850)
 
 # %% [markdown]
 # ### High noise ($\sigma = 0.5$)
 
 # %%
 #| lightbox: true
-display_image(f"{graphs_dirs['flyvis_noise_05']}/activity_traces.png", width=850)
+display_image(f"{graphs_dirs['flyvis_noise_05']}/activity.png", width=850)
 
 # %% [markdown]
 # ## References
