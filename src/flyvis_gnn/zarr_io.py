@@ -261,7 +261,7 @@ class ZarrSimulationWriterV3:
 
         n_frames = len(self._buffers['voltage'])
 
-        for name in _DYNAMIC_FIELDS:
+        for name in self._fields:
             data = np.stack(self._buffers[name], axis=0)  # (chunk, N)
 
             # resize if needed
@@ -282,7 +282,7 @@ class ZarrSimulationWriterV3:
         """Flush remaining buffer and resize stores to exact size."""
         self._flush_buffer()
 
-        for name in _DYNAMIC_FIELDS:
+        for name in self._fields:
             if name in self._stores and self._total_frames > 0:
                 self._stores[name] = self._stores[name].resize(
                     exclusive_max=[self._total_frames, self.n_neurons]
