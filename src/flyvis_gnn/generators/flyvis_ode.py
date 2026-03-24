@@ -163,7 +163,6 @@ class FlyVisODE(nn.Module):
         v_rest = self.ode_params.V_i_rest[:, None]
         e = state.stimulus.unsqueeze(-1)
         particle_type = state.neuron_type.unsqueeze(-1).long()
-
         msg = self._compute_messages(v, particle_type, edge_index)
         tau = self.ode_params.tau_i[:, None]
 
