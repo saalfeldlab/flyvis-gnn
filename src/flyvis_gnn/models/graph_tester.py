@@ -124,9 +124,8 @@ def data_test_flyvis(config, best_model=None, device=None, log_file=None, test_c
     logger.info(f'\033[94mtest dataset: {test_ds}\033[0m, {n_frames} frames, {n_neurons} neurons')
 
     # Adjust n_edges to match saved edge_index (edge removal changes the count)
-    edges_for_size = torch.load(
-        graphs_data_path(config.dataset, 'edge_index.pt'),
-        map_location='cpu', weights_only=False)
+    ode_params = FlyVisODEParams.load(graphs_data_path(config.dataset), device='cpu')
+    edges_for_size = ode_params.edge_index
     actual_n_edges = edges_for_size.shape[1]
     expected_total = sim.n_edges + sim.n_extra_null_edges
     if actual_n_edges == expected_total and sim.n_extra_null_edges > 0:
@@ -205,9 +204,7 @@ def data_test_flyvis(config, best_model=None, device=None, log_file=None, test_c
         n_eval_frames = n_frames
 
     # Load edges from training dataset (model was trained on these edges)
-    edges = torch.load(
-        graphs_data_path(config.dataset, 'edge_index.pt'),
-        map_location=device, weights_only=False)
+    edges = ode_params.edge_index.to(device)
     ids = np.arange(n_neurons)
     data_id = torch.zeros((n_neurons, 1), dtype=torch.int, device=device)
 

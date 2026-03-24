@@ -13,6 +13,7 @@ The repository also includes an agentic workflow for hyper-parameter optimizatio
 ```bash
 conda env create -f envs/environment.linux.yaml
 conda activate flyvis-gnn
+pip install -e .
 ```
 
 The pretrained flyvis model (model 000, ~105 KB) is bundled in `assets/flyvis_model/` and used automatically.
@@ -23,7 +24,19 @@ Download the [DAVIS 2017](https://davischallenge.org/davis2017/code.html) datase
 export DATAVIS_ROOT=/path/to/DAVIS
 ```
 
-The directory should contain `JPEGImages/480p/`.
+The directory structure of the downloaded data will be:
+```
+${DATAVIS_ROOT}/
+└── JPEGImages
+    ├── 1080p
+    │   ├── bear
+    │   ├── blackswan
+    ...
+    └── 480p
+        ├── bear
+        ├── bike-trial
+    ...
+```
 
 Trained GNN models and loss files are stored with [Git LFS](https://git-lfs.com/). After cloning, pull the model files:
 
