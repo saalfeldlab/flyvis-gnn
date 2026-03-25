@@ -28,10 +28,6 @@ The directory structure of the downloaded data will be:
 ```
 ${DATAVIS_ROOT}/
 └── JPEGImages
-    ├── 1080p
-    │   ├── bear
-    │   ├── blackswan
-    ...
     └── 480p
         ├── bear
         ├── bike-trial
