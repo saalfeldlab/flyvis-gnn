@@ -1,8 +1,9 @@
 # Data root config (per-environment, not tracked)
 data_paths.json
 
-# Config files tracked except archive subfolder
+# Config files tracked except archive subfolders
 config/fly/archive/
+config/fly/archive_2/
 
 # Data files (large simulation data)
 *.npy
