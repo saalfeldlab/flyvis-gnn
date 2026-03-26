@@ -283,14 +283,9 @@ class ClaudeConfig(BaseModel):
     data_augmentation_loop: int = 100  # data augmentation loop count
     n_iter_block: int = 24  # number of iterations per simulation block
     ucb_c: float = 1.414  # UCB exploration constant: UCB(k) = R²_k + c * sqrt(ln(N) / n_k)
-    n_parallel: int = 4  # number of parallel config slots per batch (GNN_LLM_parallel.py)
-    node_name: str = "a100"  # cluster GPU node: h100, a100, or l4
+    n_parallel: int = 4  # number of parallel config slots per batch
     generate_data: bool = False  # generate new simulation data before each training iteration
     training_time_target_min: int = 60  # target training time per iteration in minutes (for LLM guidance)
-    total_steps: int = 20000  # INR training iterations (used by INR_LLM.py)
-    interaction_code: bool = False  # enable Phase A interactive code sessions at block boundaries
-    case_study: str = ""  # case study identifier (e.g. "measurement_noise")
-    case_study_brief: str = ""  # description of the case study for LLM code briefs
 
 
 class GraphModelConfig(BaseModel):

@@ -1,13 +1,12 @@
 """Pipeline phase functions for the LLM exploration loop.
 
-Each function corresponds to a phase in the main batch loop of GNN_LLM.py.
+Each function corresponds to a phase in the main batch loop of GNN_Agentic.py.
 """
 
 import glob as globmod
 import os
 import re
 import shutil
-import subprocess
 import sys
 
 import yaml
@@ -20,14 +19,8 @@ from flyvis_gnn.models.utils import save_exploration_artifacts_flyvis
 from flyvis_gnn.utils import add_pre_folder, log_path, set_device
 
 from .claude_cli import run_claude_cli
-from .cluster import (
-    check_cluster_repo,
-    submit_cluster_job,
-    wait_for_cluster_jobs,
-)
-from .interactive_code import generate_code_brief, interactive_code_session
 from .prompts import analysis_prompt, batch_0_prompt
-from .resume import detect_last_iteration, get_modified_code_files, is_git_repo
+from .resume import detect_last_iteration
 from .state import BatchInfo, ExplorationState
 
 # ---------------------------------------------------------------------------
@@ -106,14 +99,9 @@ def setup_exploration(args, root_dir: str) -> ExplorationState:
         data_augmentation_loop=claude_cfg.get('data_augmentation_loop', 25),
         n_iter_block=claude_cfg.get('n_iter_block', 12),
         ucb_c=claude_cfg.get('ucb_c', 1.414),
-        node_name=claude_cfg.get('node_name', 'h100'),
         n_parallel=claude_cfg.get('n_parallel', 4),
         generate_data=generate_data,
         training_time_target_min=claude_cfg.get('training_time_target_min', 60),
-        interaction_code=claude_cfg.get('interaction_code', False),
-        case_study=claude_cfg.get('case_study', ''),
-        case_study_brief=claude_cfg.get('case_study_brief', ''),
-        cluster_enabled=args.cluster,
         n_iterations=n_iterations,
         task=task,
         sim_constraint=sim_constraint,
@@ -145,10 +133,8 @@ def setup_exploration(args, root_dir: str) -> ExplorationState:
                 sys.exit(0)
         print("\033[93mfresh start\033[0m")
 
-    mode = "cluster" if state.cluster_enabled else "local (sequential)"
-    ic_str = f", interaction_code: {state.case_study}" if state.interaction_code else ""
-    print(f"\033[94mMode: {mode}, node: gpu_{state.node_name}, n_parallel: {state.n_parallel}, "
-          f"generate_data: {state.generate_data}, training_time_target_min: {state.training_time_target_min}{ic_str}\033[0m")
+    print(f"\033[94mMode: local (sequential), n_parallel: {state.n_parallel}, "
+          f"generate_data: {state.generate_data}, training_time_target_min: {state.training_time_target_min}\033[0m")
 
     return state
 
@@ -357,60 +343,6 @@ def run_batch_0(state: ExplorationState):
 
 
 # ---------------------------------------------------------------------------
-# Code session: Interactive code modification
-# ---------------------------------------------------------------------------
-
-def run_code_session(state: ExplorationState, batch: BatchInfo):
-    """Interactive code modification session at block start (if enabled).
-
-    Skips block 1, skips if already completed (marker file exists).
-    """
-    if batch.block_number <= 1:
-        return
-
-    # Check for completion marker (new name + old name for backward compat)
-    marker = os.path.join(
-        state.exploration_dir, f'code_session_block_{batch.block_number:03d}.done'
-    )
-    old_marker = os.path.join(
-        state.exploration_dir, f'phase_a_block_{batch.block_number:03d}.done'
-    )
-
-    if os.path.exists(marker) or os.path.exists(old_marker):
-        print(f"\033[93mCode session already completed for block {batch.block_number} — skipping\033[0m")
-        return
-
-    # Erase UCB at block boundary
-    if os.path.exists(state.ucb_path):
-        os.remove(state.ucb_path)
-        print(f"\033[93mblock boundary: deleted {state.ucb_path}\033[0m")
-
-    brief_path = generate_code_brief(
-        state.memory_path, batch.block_number, state.case_study,
-        state.case_study_brief, state.root_dir, state.exploration_dir
-    )
-    code_changed = interactive_code_session(
-        brief_path, state.memory_path, state.analysis_path, state.root_dir,
-        state.case_study, state.cluster_enabled, state.exploration_dir,
-        batch.block_number
-    )
-
-    # Mark code session as done so it won't re-trigger on resume
-    with open(marker, 'w') as f:
-        f.write(f"completed at iteration {batch.batch_first}\n")
-
-    if code_changed and state.cluster_enabled:
-        print("\n\033[93mCode changes applied. Please:\033[0m")
-        print("\033[93m  1. git add + commit + push locally\033[0m")
-        print("\033[93m  2. git pull on the cluster\033[0m")
-        print("\033[93mThen press Enter to continue.\033[0m")
-        input("> ")
-        while not check_cluster_repo():
-            print("\033[91mCluster repo not in sync — please fix and press Enter.\033[0m")
-            input("> ")
-
-
-# ---------------------------------------------------------------------------
 # Phase 1: Load configs + force seeds
 # ---------------------------------------------------------------------------
 
@@ -465,224 +397,8 @@ def load_configs_and_seeds(state: ExplorationState, batch: BatchInfo):
 
 
 # ---------------------------------------------------------------------------
-# Phase 1.5 + 2 + 3: Training
+# Phase 2: Training (local)
 # ---------------------------------------------------------------------------
-
-def generate_data_locally(state: ExplorationState, batch: BatchInfo):
-    """PHASE 1.5: Generate data locally for all slots."""
-    print(f"\n\033[93mPHASE 1.5: Generating data locally for {batch.n_slots} slots\033[0m")
-    from flyvis_gnn.generators.graph_data_generator import data_generate
-
-    for slot_idx, iteration in enumerate(batch.iterations):
-        slot = slot_idx
-        config = batch.configs[slot]
-        print(f"\033[90m  slot {slot} (iter {iteration}): generating data with seed={batch.slot_seeds[slot]['simulation']}\033[0m")
-        data_generate(
-            config=config,
-            device=state.device,
-            visualize=False,
-            run_vizualized=0,
-            style="color",
-            alpha=1,
-            erase=True,
-            save=True,
-            step=100,
-        )
-
-
-def run_cluster_training(state: ExplorationState, batch: BatchInfo):
-    """PHASE 2-3: Submit cluster jobs, wait, auto-repair failed jobs."""
-    print(f"\n\033[93mPHASE 2: Submitting {batch.n_slots} flyvis training jobs to cluster\033[0m")
-
-    # Guardrail: verify cluster repo is clean before submitting
-    if not check_cluster_repo():
-        print("\033[91mAborting batch — fix cluster repo before resubmitting (use --resume)\033[0m")
-        sys.exit(1)
-
-    job_ids = {}
-    for slot_idx, iteration in enumerate(batch.iterations):
-        slot = slot_idx
-        config = batch.configs[slot]
-        jid = submit_cluster_job(
-            slot=slot,
-            config_path=state.config_paths[slot],
-            analysis_log_path=state.analysis_log_paths[slot],
-            config_file_field=config.config_file,
-            log_dir=state.log_dir,
-            root_dir=state.root_dir,
-            erase=True,
-            node_name=state.node_name,
-            exploration_dir=state.exploration_dir,
-            iteration=iteration
-        )
-        if jid:
-            job_ids[slot] = jid
-        else:
-            batch.job_results[slot] = False
-
-    if job_ids:
-        print(f"\n\033[93mPHASE 3: Waiting for {len(job_ids)} cluster jobs to complete\033[0m")
-        cluster_results = wait_for_cluster_jobs(job_ids, log_dir=state.log_dir, poll_interval=60)
-        batch.job_results.update(cluster_results)
-
-    # Auto-repair for failed jobs
-    _auto_repair_failed_jobs(state, batch)
-
-
-def _auto_repair_failed_jobs(state: ExplorationState, batch: BatchInfo):
-    """Attempt to auto-repair failed cluster training jobs."""
-    for slot_idx in range(batch.n_slots):
-        if batch.job_results.get(slot_idx) != False:
-            continue
-
-        err_content = None
-        err_file = f"{state.log_dir}/training_error_{slot_idx:02d}.log"
-        lsf_err_file = f"{state.log_dir}/cluster_train_{slot_idx:02d}.err"
-
-        for ef_path in [err_file, lsf_err_file]:
-            if os.path.exists(ef_path):
-                try:
-                    with open(ef_path, 'r') as ef:
-                        content = ef.read()
-                    if 'FLYVIS SUBPROCESS ERROR' in content or 'Traceback' in content:
-                        err_content = content
-                        break
-                except Exception:
-                    pass
-
-        if not err_content:
-            continue
-
-        print(f"\033[91m  slot {slot_idx}: TRAINING ERROR detected — attempting auto-repair\033[0m")
-
-        code_files = [
-            'src/flyvis_gnn/models/graph_trainer.py',
-            'src/flyvis_gnn/models/Signal_Propagation.py',
-            'GNN_PlotFigure.py',
-        ]
-        modified_code = get_modified_code_files(state.root_dir, code_files) if is_git_repo(state.root_dir) else []
-
-        if not modified_code:
-            print(f"\033[93m  slot {slot_idx}: no modified code files to repair — skipping\033[0m")
-            continue
-
-        max_repair_attempts = 3
-        repaired = False
-        for attempt in range(max_repair_attempts):
-            print(f"\033[93m  slot {slot_idx}: repair attempt {attempt + 1}/{max_repair_attempts}\033[0m")
-            repair_prompt = f"""TRAINING CRASHED - Please fix the code error.
-
-Error traceback:
-```
-{err_content[-3000:]}
-```
-
-Modified files: {chr(10).join(f'- {state.root_dir}/{f}' for f in modified_code)}
-
-Fix the bug. Do NOT make other changes."""
-
-            repair_cmd = [
-                'claude', '-p', repair_prompt,
-                '--output-format', 'text', '--max-turns', '10',
-                '--allowedTools', 'Read', 'Edit', 'Write'
-            ]
-            repair_result = subprocess.run(repair_cmd, cwd=state.root_dir, capture_output=True, text=True)
-            if 'CANNOT_FIX' in repair_result.stdout:
-                print(f"\033[91m  slot {slot_idx}: Claude cannot fix — stopping repair\033[0m")
-                break
-
-            print(f"\033[96m  slot {slot_idx}: resubmitting after repair\033[0m")
-            check_cluster_repo()
-            config = batch.configs[slot_idx]
-            jid = submit_cluster_job(
-                slot=slot_idx,
-                config_path=state.config_paths[slot_idx],
-                analysis_log_path=state.analysis_log_paths[slot_idx],
-                config_file_field=config.config_file,
-                log_dir=state.log_dir,
-                root_dir=state.root_dir,
-                erase=True,
-                node_name=state.node_name,
-                exploration_dir=state.exploration_dir,
-                iteration=batch.iterations[slot_idx]
-            )
-            if jid:
-                retry_results = wait_for_cluster_jobs(
-                    {slot_idx: jid}, log_dir=state.log_dir, poll_interval=60
-                )
-                if retry_results.get(slot_idx):
-                    batch.job_results[slot_idx] = True
-                    repaired = True
-                    print(f"\033[92m  slot {slot_idx}: repair successful!\033[0m")
-                    break
-                for ef_path in [err_file, lsf_err_file]:
-                    if os.path.exists(ef_path):
-                        try:
-                            with open(ef_path, 'r') as ef:
-                                err_content = ef.read()
-                            break
-                        except Exception:
-                            pass
-
-        if not repaired:
-            print(f"\033[91m  slot {slot_idx}: repair failed after {max_repair_attempts} attempts — skipping\033[0m")
-            if is_git_repo(state.root_dir):
-                for fp in code_files:
-                    try:
-                        subprocess.run(['git', 'checkout', 'HEAD', '--', fp],
-                                      cwd=state.root_dir, capture_output=True, timeout=10)
-                    except Exception:
-                        pass
-
-
-def run_local_test_plot(state: ExplorationState, batch: BatchInfo):
-    """PHASE 3.5: Run test and plot locally (cluster mode — cluster only did training)."""
-    from GNN_PlotFigure import data_plot
-
-    print(f"\n\033[93mPHASE 3.5: Running test and plot locally for {batch.n_slots} slots\033[0m")
-    for slot_idx, iteration in enumerate(batch.iterations):
-        slot = slot_idx
-        if not batch.job_results.get(slot, False):
-            print(f"\033[90m  slot {slot}: skipping test+plot (training failed)\033[0m")
-            continue
-        config = batch.configs[slot]
-        print(f"\033[90m  slot {slot} (iter {iteration}): testing and plotting locally...\033[0m")
-        log_file = open(state.analysis_log_paths[slot], 'a')
-
-        # Test
-        config.simulation.noise_model_level = 0.0
-        data_test(
-            config=config,
-            visualize=False,
-            style="color name continuous_slice",
-            verbose=False,
-            best_model='best',
-            run=0,
-            test_mode="",
-            sample_embedding=False,
-            step=10,
-            n_rollout_frames=1000,
-            device=state.device,
-            particle_of_interest=0,
-            new_params=None,
-            log_file=log_file,
-        )
-
-        # Plot
-        slot_config_file = state.pre_folder + state.slot_names[slot]
-        folder_name = log_path(state.pre_folder, 'tmp_results') + '/'
-        os.makedirs(folder_name, exist_ok=True)
-        data_plot(
-            config=config,
-            config_file=slot_config_file,
-            epoch_list=['best'],
-            style='color',
-            extended='plots',
-            device=state.device,
-            log_file=log_file,
-        )
-        log_file.close()
-
 
 def run_local_pipeline(state: ExplorationState, batch: BatchInfo):
     """PHASE 2 local: Generate + train + test + plot sequentially."""
@@ -891,33 +607,6 @@ def update_ucb_scores(state: ExplorationState, batch: BatchInfo):
 # Phase 6: Claude analysis
 # ---------------------------------------------------------------------------
 
-def build_code_brief_context(state: ExplorationState) -> str:
-    """Find code session briefs with .done markers for inclusion in analysis prompt."""
-    briefs_dir = os.path.join(state.exploration_dir, 'briefs')
-    if not os.path.isdir(briefs_dir):
-        return ""
-
-    applied_briefs = []
-    for bf in sorted(os.listdir(briefs_dir)):
-        if bf.startswith('block_') and bf.endswith('_brief.md'):
-            bnum = bf.replace('block_', '').replace('_brief.md', '')
-            # Check both new and old marker names for backward compat
-            new_marker = os.path.join(state.exploration_dir, f'code_session_block_{bnum}.done')
-            old_marker = os.path.join(state.exploration_dir, f'phase_a_block_{bnum}.done')
-            if os.path.exists(new_marker) or os.path.exists(old_marker):
-                applied_briefs.append(os.path.join(briefs_dir, bf))
-
-    if not applied_briefs:
-        return ""
-
-    return (
-        "\nCode session changes (READ THIS — new explorable parameters): "
-        + ", ".join(applied_briefs)
-        + "\nThese briefs describe structural code changes and NEW config fields added to the codebase. "
-        + "Read them to learn about new explorable training/simulation parameters you can set in YAML configs.\n"
-    )
-
-
 def run_claude_analysis(state: ExplorationState, batch: BatchInfo):
     """PHASE 6: Claude analyzes results + proposes next mutations."""
     print("\n\033[93mPHASE 6: Claude analysis + next mutations\033[0m")
@@ -938,9 +627,7 @@ def run_claude_analysis(state: ExplorationState, batch: BatchInfo):
         )
     slot_info = "\n\n".join(slot_info_lines)
 
-    code_brief_context = build_code_brief_context(state)
-
-    prompt = analysis_prompt(state, batch, slot_info, code_brief_context)
+    prompt = analysis_prompt(state, batch, slot_info, "")
 
     print("\033[93mClaude analysis...\033[0m")
     output_text = run_claude_cli(prompt, state.root_dir)
