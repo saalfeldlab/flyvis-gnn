@@ -20,16 +20,11 @@ class ExplorationState:
     data_augmentation_loop: int = 25
     n_iter_block: int = 12
     ucb_c: float = 1.414
-    node_name: str = "h100"
     n_parallel: int = 4
     generate_data: bool = False
     training_time_target_min: int = 60
-    interaction_code: bool = False
-    case_study: str = ""
-    case_study_brief: str = ""
 
     # Runtime mode
-    cluster_enabled: bool = False
     start_iteration: int = 1
     n_iterations: int = 144
 
