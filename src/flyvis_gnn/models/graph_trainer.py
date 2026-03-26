@@ -192,13 +192,13 @@ def data_train_flyvis(config, erase, best_model, device, log_file=None):
 
     n_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     _logger.info(f'total parameters: {n_total_params:,}')
-    lr = tc.learning_rate_start
+    lr = tc.lr
     if tc.learning_rate_update_start == 0:
-        lr_update = tc.learning_rate_start
+        lr_update = tc.lr
     else:
         lr_update = tc.learning_rate_update_start
-    lr_embedding = tc.learning_rate_embedding_start
-    lr_W = tc.learning_rate_W_start
+    lr_embedding = tc.lr_embedding
+    lr_W = tc.lr_W
     learning_rate_NNR = tc.learning_rate_NNR
     learning_rate_NNR_f = tc.learning_rate_NNR_f
 
@@ -330,7 +330,7 @@ def data_train_flyvis(config, erase, best_model, device, log_file=None):
             # Unfreeze embedding at the midpoint after UMAP clustering froze it
             if embedding_frozen and N == unfreeze_at_iteration:
                 embedding_frozen = False
-                lr_embedding = tc.learning_rate_embedding_start
+                lr_embedding = tc.lr_embedding
                 optimizer, n_total_params = set_trainable_parameters(
                     model=model, lr_embedding=lr_embedding, lr=lr,
                     lr_update=lr_update, lr_W=lr_W,
@@ -717,9 +717,9 @@ def data_train_flyvis(config, erase, best_model, device, log_file=None):
                     # the embedding is fixed for 1 epoch
 
             else:
-                lr = tc.learning_rate_start
-                lr_embedding = tc.learning_rate_embedding_start
-                lr_W = tc.learning_rate_W_start
+                lr = tc.lr
+                lr_embedding = tc.lr_embedding
+                lr_W = tc.lr_W
                 learning_rate_NNR = tc.learning_rate_NNR
 
             logger.info(f'learning rates: lr_W {lr_W}, lr {lr}, lr_update {lr_update}, lr_embedding {lr_embedding}, learning_rate_NNR {learning_rate_NNR}')
@@ -775,9 +775,9 @@ def data_train_flyvis(config, erase, best_model, device, log_file=None):
         log_file.write(f"data_augmentation_loop: {tc.data_augmentation_loop}\n")
         log_file.write(f"recurrent_training: {tc.recurrent_training}\n")
         log_file.write(f"batch_size: {tc.batch_size}\n")
-        log_file.write(f"learning_rate_W: {tc.learning_rate_W_start}\n")
-        log_file.write(f"learning_rate: {tc.learning_rate_start}\n")
-        log_file.write(f"learning_rate_embedding: {tc.learning_rate_embedding_start}\n")
+        log_file.write(f"learning_rate_W: {tc.lr_W}\n")
+        log_file.write(f"learning_rate: {tc.lr}\n")
+        log_file.write(f"learning_rate_embedding: {tc.lr_embedding}\n")
         log_file.write(f"coeff_g_phi_diff: {tc.coeff_g_phi_diff}\n")
         log_file.write(f"coeff_g_phi_norm: {tc.coeff_g_phi_norm}\n")
         log_file.write(f"coeff_g_phi_weight_L1: {tc.coeff_g_phi_weight_L1}\n")
@@ -857,7 +857,7 @@ def data_train_flyvis_RNN(config, erase, best_model, device):
     logger.info(f'Total parameters: {n_total_params:,}')
 
     # Optimizer
-    lr = tc.learning_rate_start
+    lr = tc.lr
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
 
     _logger.info(f'learning rate: {lr}')

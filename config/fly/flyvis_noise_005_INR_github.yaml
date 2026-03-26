@@ -63,9 +63,9 @@ training:
   batch_ratio: 1
   sparsity: none
   data_augmentation_loop: 25
-  learning_rate_W_start: 0.0005
-  learning_rate_start: 0.0012
-  learning_rate_embedding_start: 0.0015
+  lr_W: 0.0005
+  lr: 0.0012
+  lr_embedding: 0.0015
   learning_rate_NNR_f: 1.0e-08
   alternate_training: true
   alternate_lr_ratio: 0.05
