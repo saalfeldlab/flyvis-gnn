@@ -47,6 +47,7 @@ if __name__ == "__main__":
             'flyvis_noise_free_known_ode',
             'flyvis_noise_005_known_ode',
             'flyvis_noise_05_known_ode',
+            'flyvis_noise_005_INR_known_ode',
         ],
     }
 
