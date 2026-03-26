@@ -407,6 +407,17 @@ def _run_ode_generation(stimulus_sequences, net, pde, x, edge_index, initial_sta
                     else:
                         y = pde(x, edge_index, has_field=False)
                         dv_step = y.squeeze()
+
+                    # Generate measurement noise for this timestep
+                    if sim.measurement_noise_level > 0:
+                        x.noise = torch.randn(n_neurons, dtype=torch.float32, device=device) * sim.measurement_noise_level
+                    else:
+                        x.noise = torch.zeros(n_neurons, dtype=torch.float32, device=device)
+
+                    # Save x[t] BEFORE updating voltage to x[t+1]
+                    x_writer.append_state(x)
+
+                    if not (has_gates and hh_substeps > 1):
                         if sim.noise_model_level > 0:
                             x.voltage = x.voltage + sim.delta_t * dv_step + torch.randn(n_neurons, dtype=torch.float32, device=device) * sim.noise_model_level
                         else:
@@ -421,14 +432,6 @@ def _run_ode_generation(stimulus_sequences, net, pde, x, edge_index, initial_sta
                         _hh_debug_buffers['m'].append(x.hh_m.cpu().numpy().copy())
                         _hh_debug_buffers['h'].append(x.hh_h.cpu().numpy().copy())
                         _hh_debug_buffers['n'].append(x.hh_n.cpu().numpy().copy())
-
-                    # Generate measurement noise for this timestep
-                    if sim.measurement_noise_level > 0:
-                        x.noise = torch.randn(n_neurons, dtype=torch.float32, device=device) * sim.measurement_noise_level
-                    else:
-                        x.noise = torch.zeros(n_neurons, dtype=torch.float32, device=device)
-
-                    x_writer.append_state(x)
 
                     if sim.calcium_type == "leaky":
                         if sim.calcium_activation == "softplus":
