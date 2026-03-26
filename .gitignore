@@ -1,7 +1,9 @@
 # Data root config (per-environment, not tracked)
 data_paths.json
 
-# Config files tracked except archive subfolders
+# Track only config/fly/, ignore all other config subfolders
+config/*
+!config/fly/
 config/fly/archive/
 config/fly/archive_2/
 
