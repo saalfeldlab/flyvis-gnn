@@ -80,7 +80,7 @@ training:
   coeff_W_L1_rate: 0.5
   w_init_mode: randn_scaled
   use_gt_edges: true
-  regul_annealing_rate: 0.0
+  regul_annealing_rate: 0.5  # DO NOT set to 0 — catastrophic with n_epochs=3 (tested 2026-03-26). Unlike GNN-only (n_epochs=1), joint INR training needs annealing active.
   seed: 42
 claude:
   n_epochs: 3
