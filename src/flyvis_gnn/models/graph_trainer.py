@@ -812,7 +812,7 @@ def data_train_flyvis_RNN(config, erase, best_model, device):
     _logger.info(f"Loading data from {config.dataset}...")
     x_list = []
     y_list = []
-    for run in trange(0, tc.n_runs, ncols=50):
+    for run in trange(0, tc.n_runs, ncols=100):
         x = np.load(graphs_data_path(config.dataset, f'x_list_{run}.npy'))
         y = np.load(graphs_data_path(config.dataset, f'y_list_{run}.npy'))
 

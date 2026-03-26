@@ -63,10 +63,10 @@ training:
   batch_ratio: 1
   sparsity: none
   data_augmentation_loop: 25
-  learning_rate_W_start: 0.0005
-  learning_rate_start: 0.0012
-  learning_rate_embedding_start: 0.0015
-  learning_rate_NNR_f: 1.0e-08
+  lr_W: 0.0005
+  lr: 0.0012
+  lr_embedding: 0.0015
+  lr_NNR_f: 1.0e-08
   alternate_training: true
   alternate_lr_ratio: 0.05
   coeff_g_phi_diff: 750
@@ -79,6 +79,7 @@ training:
   coeff_W_L1: 5.0e-05
   coeff_W_L1_rate: 0.5
   w_init_mode: randn_scaled
+  use_gt_edges: true
   regul_annealing_rate: 0.5
   seed: 42
 claude:

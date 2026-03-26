@@ -51,9 +51,9 @@ training:
   small_init_batch_size: false
   sparsity: none
   data_augmentation_loop: 20
-  learning_rate_W_start: 1.0e-3
-  learning_rate_start: 5.0e-4
-  learning_rate_embedding_start: 5.0e-3
+  lr_W: 1.0e-3
+  lr: 5.0e-4
+  lr_embedding: 5.0e-3
   coeff_g_phi_diff: 500
   coeff_f_theta_msg_diff: 0
   coeff_g_phi_norm: 1.0
@@ -65,4 +65,5 @@ training:
   coeff_W_L2: 0
   regul_annealing_rate: 0
   w_init_mode: "randn_scaled"
+  use_gt_edges: true
   seed: 42
