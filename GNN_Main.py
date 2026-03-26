@@ -42,7 +42,13 @@ if __name__ == "__main__":
 
     if args.option:
         print(f"Options: {args.option}")
-    CONFIG_LISTS = {}
+    CONFIG_LISTS = {
+        'known_ode': [
+            'flyvis_noise_free_known_ode',
+            'flyvis_noise_005_known_ode',
+            'flyvis_noise_05_known_ode',
+        ],
+    }
 
     if args.option is not None:
         task = args.option[0]

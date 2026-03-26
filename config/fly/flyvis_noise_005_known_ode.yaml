@@ -71,4 +71,4 @@ training:
   w_init_mode: randn_scaled
   use_gt_edges: true
   regul_annealing_rate: 0
-  seed: 43
+  seed: 42
