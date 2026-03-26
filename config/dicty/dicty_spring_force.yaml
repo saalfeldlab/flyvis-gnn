@@ -1,0 +1,70 @@
+description: "3D overdamped cells with spring repulsion + adhesion"
+dataset: "dicty_spring_force"
+
+simulation:
+  dimension: 3
+  n_cells: 4800
+  n_cell_types: 2
+  n_frames: 8000
+  delta_t: 0.0001
+  max_radius: 0.14
+  min_radius: 0
+  sigma: 0.005
+  boundary: "periodic"
+  dpos_init: 0
+  cell_params:
+    [
+      [50.0, 0.1, 50.0, 0.14, 0.001, 0.05],
+      [30.0, 0.08, 80.0, 0.12, 0.002, 0.03],
+    ]
+  # k_rep  r0   kadh  r_on  delta  mu_f
+  func_params: [["spring", 0, 0]]
+  noise_model_level: 0
+
+graph_model:
+  cell_model_name: "dicty_spring_force_ode"
+  prediction: "first_derivative"
+  input_size: 6
+  output_size: 3
+  hidden_dim: 128
+  n_layers: 5
+  aggr_type: "add"
+  embedding_dim: 2
+  update_type: "none"
+
+plotting:
+  colormap: "tab10"
+  arrow_length: 2
+  xlim: [0, 0.14]
+
+inr:
+  inr_field_name: "velocity"
+  inr_type: "siren_txyz"
+  inr_gradient_mode: false
+  hidden_dim_inr: 256
+  n_layers_inr: 5
+  omega_inr: 80.0
+  inr_total_steps: 500000
+  inr_batch_size: 8
+  inr_lr: 1.0e-5
+  inr_xy_period: 1.0
+  inr_t_period: 1.0
+
+training:
+  n_runs: 1
+  device: "auto"
+  n_epochs: 1
+  batch_size: 8
+  small_init_batch_size: False
+  sparsity: "none"
+  rotation_augmentation: True
+  data_augmentation_loop: 20
+  lr: 1.0E-4
+  lr_embedding: 1.0E-5
+
+claude:
+  n_epochs: 1
+  data_augmentation_loop: 40
+  n_iter_block: 24
+  ucb_c: 1.414
+  node_name: "h100"

@@ -1,0 +1,80 @@
+description: "Drosophila larva two-population motor model (Beiran & Litwin-Kumar 2023, Fig 5)"
+dataset: larva
+simulation:
+  connectivity_file: to be specified
+  adjacency_matrix: ""
+  params:
+    - - 1.0
+      - 1.0
+  n_neurons: 230 # 178 premotor + 52 motor (from h5 data)
+  n_input_neurons: 0
+  n_neuron_types: 2 # premotor, motor
+  n_edges: 4222 # Jpp=2390 + Jpm=1832
+  n_frames: 2400 # 10 repeats x 2 conditions x 120 frames
+  delta_t: 0.05
+  baseline_value: 0
+  noise_model_level: 0.0
+  measurement_noise_level: 0.0
+  seed: 42
+  connconstr_datapath: "papers/Code_NN/Code_NN/Data/Figure5"
+  connconstr_model: larva
+  connconstr_n_trials: 10
+  connconstr_use_pretrained: true
+graph_model:
+  signal_model_name: larva
+  prediction: first_derivative
+  input_size: 3
+  n_layers: 3
+  hidden_dim: 64
+  output_size: 1
+  input_size_update: 5
+  n_layers_update: 3
+  hidden_dim_update: 64
+  aggr_type: add
+  embedding_dim: 2
+  update_type: generic
+  g_phi_positive: false
+plotting:
+  colormap: tab10
+  arrow_length: 1
+  xlim:
+    - -2.5
+    - 2.5
+  ylim:
+    - -5
+    - 5
+training:
+  n_epochs: 20
+  n_runs: 1
+  device: auto
+  batch_size: 4
+  batch_ratio: 1
+  small_init_batch_size: false
+  sparsity: none
+  data_augmentation_loop: 500
+  lr_W: 0.001
+  lr: 0.001
+  lr_embedding: 0.001
+  coeff_g_phi_diff: 1500
+  coeff_f_theta_msg_diff: 0
+  coeff_g_phi_norm: 0
+  coeff_g_phi_weight_L1: 0.0
+  coeff_f_theta_weight_L1: 0
+  coeff_g_phi_weight_L2: 0
+  coeff_f_theta_weight_L2: 0.001
+  coeff_W_L1: 0
+  coeff_W_L2: 1.5e-06
+  coeff_W_sign: 0.0
+  regul_annealing_rate: 0
+  w_init_mode: "randn_scaled"
+  w_init_scale: 1.0
+  seed: 42
+claude:
+  n_epochs: 1
+  data_augmentation_loop: 2800
+  n_iter_block: 12
+  ucb_c: 0
+  n_parallel: 4
+  node_name: a100
+  generate_data: true
+  training_time_target_min: 60

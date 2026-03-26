@@ -1,5 +1,5 @@
-description: "flyvis noise=0.05 — LLM exploration winner (conn_R2=0.982, CV=0.30%). aug=35, bs=4, 1.5x LRs, emb=2, randn_scaled"
-dataset: flyvis_noise_005
+description: "flyvis DAVIS training with measurement noise"
+dataset: flyvis_noise_005_010
 simulation:
   connectivity_file: to be specified
   adjacency_matrix: ""
@@ -17,7 +17,7 @@ simulation:
   baseline_value: 0
   visual_input_type: DAVIS
   noise_model_level: 0.05
-  derivative_smoothing_window: 1
+  measurement_noise_level: 0.10
   seed: 42
 graph_model:
   signal_model_name: flyvis_A
@@ -43,49 +43,41 @@ plotting:
     - -100
     - 100
 training:
-  n_epochs: 1
+  n_epochs: 2
   n_runs: 1
   device: auto
   recurrent_training: false
-  time_step: 1
-  batch_size: 4
+  batch_size: 6
   batch_ratio: 1
   small_init_batch_size: false
   sparsity: none
-  data_augmentation_loop: 35
-  learning_rate_W_start: 0.0009
-  learning_rate_start: 0.0018
-  learning_rate_embedding_start: 0.002325
-  coeff_g_phi_diff: 750
+  data_augmentation_loop: 30
+  lr_W: 0.0009
+  lr: 0.0018
+  lr_embedding: 0.002325
+  coeff_g_phi_diff: 1200
   coeff_f_theta_msg_diff: 0
   coeff_g_phi_norm: 0.9
   coeff_g_phi_weight_L1: 0.28
   coeff_f_theta_weight_L1: 0.05
   coeff_g_phi_weight_L2: 0
   coeff_f_theta_weight_L2: 0.001
-  coeff_W_L1: 0.00015
+
+  coeff_W_L1: 5.0e-04
   coeff_W_L2: 1.5e-06
-  coeff_f_theta_linearity: 0
-  f_theta_linearity_warmup_fraction: 0.3
-  f_theta_linearity_rampup_iters: 200
-  coeff_f_theta_centering: 0
-  coeff_V_rest: 0
-  V_rest_warmup_fraction: 0.3
-  V_rest_rampup_iters: 200
-  V_rest_eval_every: 10
-  regul_annealing_rate: 0.0
-  w_init_mode: randn_scaled
+  w_init_mode: "randn_scaled"
   use_gt_edges: true
-  lr_scheduler: none
-  lr_scheduler_T0: 1000
-  lr_scheduler_T_mult: 2
-  lr_scheduler_eta_min_ratio: 0.01
-  lr_scheduler_warmup_iters: 100
+  regul_annealing_rate: 0
   seed: 42
+  test_dataset: fly/flyvis_noise_free
+
 claude:
   n_epochs: 1
-  data_augmentation_loop: 35
+  data_augmentation_loop: 20
   n_iter_block: 12
   ucb_c: 1.414
+  node_name: a100
   generate_data: true
   training_time_target_min: 60
+  n_parallel: 4
+  interaction_code: true

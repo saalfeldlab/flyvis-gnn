@@ -1,8 +1,8 @@
 # Data root config (per-environment, not tracked)
 data_paths.json
 
-# Config files live in GraphData/config/, not in the repo
-config/
+# Config files tracked except archive subfolder
+config/fly/archive/
 
 # Data files (large simulation data)
 *.npy
