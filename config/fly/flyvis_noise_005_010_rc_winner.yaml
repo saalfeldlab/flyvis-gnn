@@ -19,7 +19,7 @@
 # Key config differences from baseline (flyvis_noise_005_010):
 #   - recurrent_training: true, time_step: 5
 #   - batch_size: 6 -> 32 (noise averaging)
-#   - learning_rate_W_start: 0.0009 -> 0.0005 (prevents over-training)
+#   - lr_W: 0.0009 -> 0.0005 (prevents over-training)
 #   - coeff_g_phi_weight_L1: 0.28 -> 0.0 (breakthrough: full g_phi expressivity)
 #   - coeff_g_phi_diff: 1200 (up from 750 baseline)
 #   - pretrained_model: from flyvis_noise_005_010 best checkpoint
@@ -82,9 +82,9 @@ training:
   small_init_batch_size: false
   sparsity: none
   data_augmentation_loop: 22
-  learning_rate_W_start: 0.0005
-  learning_rate_start: 0.0018
-  learning_rate_embedding_start: 0.002325
+  lr_W: 0.0005
+  lr: 0.0018
+  lr_embedding: 0.002325
   coeff_g_phi_diff: 1200
   coeff_f_theta_msg_diff: 0
   coeff_g_phi_norm: 0.9

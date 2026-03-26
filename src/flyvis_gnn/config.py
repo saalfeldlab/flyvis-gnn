@@ -524,11 +524,11 @@ class TrainingConfig(BaseModel):
     low_rank_factorization: bool = False
     low_rank: int = 20
 
-    learning_rate_start: float = 0.001
-    learning_rate_embedding_start: float = 0.001
+    lr: float = 0.001
+    lr_embedding: float = 0.001
     learning_rate_update_start: float = 0.0
     learning_rate_modulation_start: float = 0.0001
-    learning_rate_W_start: float = 0.0001
+    lr_W: float = 0.0001
 
     learning_rate_end: float = 0.0005
     learning_rate_embedding_end: float = 0.0001
