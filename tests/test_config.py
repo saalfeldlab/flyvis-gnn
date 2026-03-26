@@ -52,7 +52,7 @@ class TestNeuralGraphConfig:
     def test_defaults_applied(self, minimal_config_dict):
         config = NeuralGraphConfig(**minimal_config_dict)
         assert config.simulation.boundary == Boundary.PERIODIC
-        assert config.training.learning_rate_start == 0.001
+        assert config.training.lr == 0.001
         assert config.graph_model.prediction == Prediction.SECOND_DERIVATIVE
 
     def test_simulation_defaults(self, minimal_config):
