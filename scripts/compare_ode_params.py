@@ -28,6 +28,16 @@ def compare(dataset_new, dataset_old):
     folder_new = graphs_data_path(dataset_new)
     folder_old = graphs_data_path(dataset_old)
 
+    for label, folder in [("NEW", folder_new), ("OLD", folder_old)]:
+        print(f"{label} folder: {folder}")
+        if os.path.isdir(folder):
+            files = sorted(os.listdir(folder))
+            pt_files = [f for f in files if f.endswith('.pt')]
+            print(f"  .pt files: {pt_files}")
+        else:
+            print(f"  DOES NOT EXIST")
+    print()
+
     # Load new
     new = FlyVisODEParams.load(folder_new, device='cpu')
     print(f"NEW ({dataset_new}):")

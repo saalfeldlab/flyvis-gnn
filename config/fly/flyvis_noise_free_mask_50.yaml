@@ -49,4 +49,5 @@ training:
   device: auto
   batch_size: 2
   data_augmentation_loop: 20
+  use_gt_edges: true
   seed: 42
