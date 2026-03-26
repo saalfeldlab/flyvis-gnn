@@ -1,0 +1,20 @@
+{
+    "date": "2026-02-27",
+    "description": "Baseline reference metrics for regression testing",
+    "metrics": {
+        "corrected_W_R2": 0.9714,
+        "tau_R2": 0.991,
+        "V_rest_R2": 0.706,
+        "GMM_accuracy": 0.863,
+        "rollout_RMSE": 0.0120,
+        "rollout_pearson": 0.997
+    },
+    "thresholds": {
+        "corrected_W_R2": 0.02,
+        "tau_R2": 0.02,
+        "V_rest_R2": 0.05,
+        "GMM_accuracy": 0.05,
+        "rollout_RMSE": 0.005,
+        "rollout_pearson": 0.01
+    }
+}

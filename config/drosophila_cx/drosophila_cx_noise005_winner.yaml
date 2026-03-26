@@ -1,0 +1,99 @@
+# Winner config: drosophila_cx_noise005_winner.yaml
+# Source: iter_016_slot_03 (connectivity_R2 = 0.938)
+# Exploration: 16 iterations, 2 blocks
+# Date: 2026-03-25
+#
+# Why this is the winner:
+#   - W_L2=3e-5 was the key improvement from Block 2, tripling L2 from baseline 1e-5
+#   - Lucky seed achieved 0.938, but mean across 4 seeds is 0.642 (CV=31%) — high variance
+#
+# Metrics:
+#   connectivity_R2: 0.938 (best single seed)
+#   robust_mean:     0.642 +/- 0.199 (4 seeds, CV=31%)
+#   rollout_pearson: 0.992
+#   cluster_accuracy: 0.322
+#   spectral_radius: 2.187 (true: 2.545)
+#
+# Key config differences from baseline:
+#   - coeff_W_L2: 1e-5 -> 3e-5 (stronger L2 regularization for noise)
+#   - data_augmentation_loop: 300 -> 100 (reduced for 60 min training time)
+description: designed by Claude (parallel flyvis)
+dataset: drosophila_cx_noise005_03
+simulation:
+  connectivity_file: to be specified
+  adjacency_matrix: ''
+  params:
+  - - 1.0
+    - 1.0
+  n_neurons: 152
+  n_input_neurons: 0
+  n_neuron_types: 6
+  n_edges: 0
+  n_frames: 10000
+  delta_t: 0.1
+  baseline_value: 0
+  noise_model_level: 0.05
+  seed: 16003
+  connconstr_datapath: papers/Code_NN/Code_NN/Data/Figure5
+  connconstr_model: drosophila_cx
+  connconstr_n_trials: 50
+  connconstr_use_pretrained: true
+graph_model:
+  signal_model_name: drosophila_cx
+  prediction: first_derivative
+  input_size: 5
+  n_layers: 3
+  hidden_dim: 96
+  output_size: 1
+  input_size_update: 7
+  n_layers_update: 3
+  hidden_dim_update: 96
+  aggr_type: add
+  embedding_dim: 4
+  update_type: generic
+  g_phi_positive: true
+plotting:
+  colormap: tab10
+  arrow_length: 1
+  xlim:
+  - -2.5
+  - 2.5
+  ylim:
+  - -5
+  - 5
+training:
+  n_epochs: 2
+  n_runs: 1
+  device: auto
+  batch_size: 2
+  batch_ratio: 1
+  small_init_batch_size: false
+  sparsity: none
+  data_augmentation_loop: 100
+  lr_W: 0.0003
+  lr: 0.001
+  lr_embedding: 0.001
+  coeff_g_phi_diff: 1500
+  coeff_f_theta_msg_diff: 50
+  coeff_g_phi_norm: 0
+  coeff_g_phi_weight_L1: 0.0
+  coeff_f_theta_weight_L1: 0
+  coeff_g_phi_weight_L2: 0
+  coeff_f_theta_weight_L2: 0.001
+  coeff_W_L1: 3.0e-06
+  coeff_W_L2: 3.0e-05
+  coeff_W_sign: 0.0
+  regul_annealing_rate: 0
+  w_init_mode: zeros
+  use_gt_edges: false
+  dale_law: false
+  seed: 16503
+claude:
+  n_epochs: 2
+  data_augmentation_loop: 100
+  n_iter_block: 16
+  ucb_c: 0
+  n_parallel: 4
+  node_name: l4
+  generate_data: true
+  training_time_target_min: 60
