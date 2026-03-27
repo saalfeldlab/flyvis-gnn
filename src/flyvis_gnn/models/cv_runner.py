@@ -98,9 +98,14 @@ def run_cv(config_name, seeds):
     base_config = NeuralGraphConfig.from_yaml(f"./config/{config_file}.yaml")
     device = set_device(base_config.training.device)
 
-    # Output directory for CV summary
-    cv_out_dir = os.path.join("log", "results", config_name)
-    os.makedirs(cv_out_dir, exist_ok=True)
+    # Shared dataset name (one copy on disk for all seeds)
+    shared_dataset = pre_folder + f"{config_name}_cv"
+
+    # Output directories for CV results
+    cv_log_dir = os.path.join("log", "fly", f"{config_name}_cv")
+    cv_results_dir = os.path.join("log", "results", config_name)
+    os.makedirs(cv_log_dir, exist_ok=True)
+    os.makedirs(cv_results_dir, exist_ok=True)
 
     all_metrics = {key: [] for key, _ in METRICS}
 
@@ -111,12 +116,11 @@ def run_cv(config_name, seeds):
         print(f"CV run {i+1}/{len(seeds)}  seed={seed}  ({run_name})")
         print("=" * 80)
 
-        # Build per-seed config
-        config_file_i, pre_folder_i = add_pre_folder(run_name)
+        # Shared dataset, per-seed log dir
         config = NeuralGraphConfig.from_yaml(f"./config/{config_file}.yaml")
         config.training.seed = seed
-        config.dataset = pre_folder + f"{config_name}_cv{i:02d}"
-        config.config_file = pre_folder + run_name
+        config.dataset = shared_dataset        # all seeds share one graphs_data dir
+        config.config_file = pre_folder + run_name  # each seed gets its own log dir
 
         graphs_dir = graphs_data_path(config.dataset)
 
@@ -160,11 +164,12 @@ def run_cv(config_name, seeds):
             all_metrics[key].append(val)
             print(f"    {key}: {val:.4f}" if not np.isnan(val) else f"    {key}: —")
 
-        # --- Update bar plot after every run ---
-        _save_barplot(all_metrics, config_name, seeds, cv_out_dir, n_done=i + 1)
+        # --- Update bar plot after every run (both output dirs) ---
+        _save_barplot(all_metrics, config_name, seeds, cv_log_dir, n_done=i + 1)
+        _save_barplot(all_metrics, config_name, seeds, cv_results_dir, n_done=i + 1)
 
         # --- Append per-run line to log immediately ---
-        summary_path = os.path.join(cv_out_dir, "cv_summary.txt")
+        summary_path = os.path.join(cv_log_dir, "cv_summary.txt")
         with open(summary_path, 'a') as f:
             if i == 0:
                 f.write(f"CV log: {config_name}\n")
@@ -180,8 +185,8 @@ def run_cv(config_name, seeds):
             )
             f.write(f"{i:<6} {seed:<6}{vals_str}\n")
 
-    # --- Append summary statistics to log ---
-    summary_path = os.path.join(cv_out_dir, "cv_summary.txt")
+    # --- Append summary statistics to both log dirs ---
+    summary_path = os.path.join(cv_log_dir, "cv_summary.txt")
     with open(summary_path, 'a') as f:
         f.write("=" * 80 + "\n")
         f.write(f"{'Metric':<30} {'Mean':>8} {'SD':>8} {'CV%':>7} {'Min':>8} {'Max':>8}\n")
@@ -196,8 +201,12 @@ def run_cv(config_name, seeds):
                 f.write(f"{key:<30} {mean:>8.4f} {sd:>8.4f} {cv_pct:>6.1f}% {mn:>8.4f} {mx:>8.4f}\n")
             else:
                 f.write(f"{key:<30} {'—':>8} {'—':>8} {'—':>7} {'—':>8} {'—':>8}\n")
-    print(f"\nCV summary saved to {summary_path}")
-    print(f"Bar plot: {os.path.join(cv_out_dir, 'cv_barplot.png')}")
+    import shutil
+    shutil.copy(summary_path, os.path.join(cv_results_dir, "cv_summary.txt"))
+    print(f"\nCV summary: {summary_path}")
+    print(f"            {os.path.join(cv_results_dir, 'cv_summary.txt')}")
+    print(f"Bar plot:   {os.path.join(cv_log_dir, 'cv_barplot.png')}")
+    print(f"            {os.path.join(cv_results_dir, 'cv_barplot.png')}")
 
 
 if __name__ == "__main__":
