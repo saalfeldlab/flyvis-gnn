@@ -8,7 +8,7 @@
 #   - Null Edges
 # execute:
 #   echo: false
-# image: "log/fly/flyvis_noise_005_null_edges_200/results/weights_comparison_corrected.png"
+# image: "log/fly/flyvis_noise_005_null_edges_pc_200/results/weights_comparison_corrected.png"
 # description: "Train the GNN with 100%, 200%, and 400% extra random null edges appended to the true connectome. Evaluate whether the model can still recover synaptic weights, biophysical parameters, and neuron-type identity despite the corrupted adjacency matrix."
 # ---
 
@@ -28,9 +28,9 @@
 #
 # | Config | Extra null edges | Total edges | Ratio |
 # |:--|:--|:--|:--|
-# | `flyvis_noise_005_null_edges_100` | 434,112 | 868,224 | 1:1 (100%) |
-# | `flyvis_noise_005_null_edges_200` | 868,224 | 1,302,336 | 2:1 (200%) |
-# | `flyvis_noise_005_null_edges_400` | 1,736,448 | 2,170,560 | 4:1 (400%) |
+# | `flyvis_noise_005_null_edges_pc_100` | 434,112 | 868,224 | 1:1 (100%) |
+# | `flyvis_noise_005_null_edges_pc_200` | 868,224 | 1,302,336 | 2:1 (200%) |
+# | `flyvis_noise_005_null_edges_pc_400` | 1,736,448 | 2,170,560 | 4:1 (400%) |
 
 # %% [markdown]
 # ## Noise Level
@@ -42,9 +42,9 @@
 # (low noise).  To change the noise level, edit the
 # `noise_model_level` field in the respective config files:
 #
-# - `config/fly/flyvis_noise_005_null_edges_100.yaml`
-# - `config/fly/flyvis_noise_005_null_edges_200.yaml`
-# - `config/fly/flyvis_noise_005_null_edges_400.yaml`
+# - `config/fly/flyvis_noise_005_null_edges_pc_100.yaml`
+# - `config/fly/flyvis_noise_005_null_edges_pc_200.yaml`
+# - `config/fly/flyvis_noise_005_null_edges_pc_400.yaml`
 
 # %%
 #| output: false
