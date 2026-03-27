@@ -18,9 +18,16 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+# Remove the script dir Python auto-inserts: src/flyvis_gnn/models/ contains
+# flyvis_gnn.py which would shadow the flyvis_gnn package if left in sys.path.
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+if _script_dir in sys.path:
+    sys.path.remove(_script_dir)
+
 # repo root: src/flyvis_gnn/models/ -> src/flyvis_gnn/ -> src/ -> repo root
-sys_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-sys.path.insert(0, sys_path)
+_repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, os.path.join(_repo_root, 'src'))  # for flyvis_gnn package
+sys.path.insert(0, _repo_root)                        # for GNN_PlotFigure
 
 from GNN_PlotFigure import data_plot
 from flyvis_gnn.config import NeuralGraphConfig
