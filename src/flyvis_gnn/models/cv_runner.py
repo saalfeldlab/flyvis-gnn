@@ -35,7 +35,6 @@ sys.path.insert(0, os.path.join(_repo_root, 'src'))  # for flyvis_gnn package
 sys.path.insert(0, _repo_root)                        # for GNN_PlotFigure
 
 from GNN_PlotFigure import data_plot  # noqa: E402
-
 from flyvis_gnn.config import NeuralGraphConfig
 from flyvis_gnn.generators.graph_data_generator import data_generate
 from flyvis_gnn.models.graph_trainer import data_test, data_train
