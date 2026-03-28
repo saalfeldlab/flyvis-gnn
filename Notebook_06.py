@@ -60,7 +60,8 @@ sys.path.insert(0, sys_path)
 
 from GNN_PlotFigure import data_plot
 from flyvis_gnn.config import NeuralGraphConfig
-from flyvis_gnn.models.graph_trainer import data_test
+from flyvis_gnn.generators.graph_data_generator import data_generate
+from flyvis_gnn.models.graph_trainer import data_test, data_train
 from flyvis_gnn.plot import plot_loss_from_file
 from flyvis_gnn.utils import set_device, add_pre_folder, graphs_data_path, log_path
 
@@ -85,7 +86,7 @@ def display_image(path, width=700):
 # neuron pairs not already connected.  The GNN architecture and
 # training hyperparameters are otherwise identical across conditions.
 #
-# The GNN is remarkably robust to null-edge contamination: even
+# The GNN is robust to null-edge contamination: even
 # with 4x as many spurious edges as real ones, it recovers
 # synaptic weights, biophysical parameters, and neuron-type
 # identity with only modest degradation.  The model effectively
@@ -116,38 +117,57 @@ device = set_device(configs[datasets[0][0]].training.device)
 
 # %%
 #| output: false
-# Check that data exists
-missing_data = []
+print()
+print("=" * 80)
+print("GENERATE - Simulating fly visual system (null-edge variants)")
+print("=" * 80)
+
 for config_name, table_label, label in datasets:
-    gdir = graphs_dirs[config_name]
-    has_data = (os.path.isfile(os.path.join(gdir, "x_list_train.pt"))
-                or os.path.isfile(os.path.join(gdir, "x_list_train.npy"))
-                or os.path.isdir(os.path.join(gdir, "x_list_train")))
-    if not has_data:
-        missing_data.append(label)
+    config = configs[config_name]
+    graphs_dir = graphs_dirs[config_name]
+    print()
+    print(f"--- {label} ---")
+    data_exists = os.path.isdir(os.path.join(graphs_dir, 'x_list_train'))
+    if data_exists:
+        print(f"  data already exists at {graphs_dir}/")
+        print("  skipping simulation...")
+    else:
+        print(f"  generating data at {graphs_dir}/")
+        data_generate(
+            config,
+            device=device,
+            visualize=False,
+            run_vizualized=0,
+            style="color",
+            alpha=1,
+            erase=False,
+            save=True,
+            step=100,
+        )
 
-if missing_data:
-    msg = ", ".join(missing_data)
-    raise RuntimeError(
-        f"Training data not found for: {msg}. "
-        f"Please run Notebook_00 first to generate the data, then train "
-        f"with: python GNN_Main.py -o generate_train <config_name>"
-    )
+print()
+print("=" * 80)
+print("TRAIN - GNN on fly visual system (null-edge variants)")
+print("=" * 80)
 
-# Check that trained models exist
-missing_models = []
 for config_name, table_label, label in datasets:
-    log_dir = log_path(configs[config_name].config_file)
-    model_files = glob.glob(f"{log_dir}/models/best_model_with_*.pt")
-    if not model_files:
-        missing_models.append(f"{label} ({config_name})")
-
-if missing_models:
-    msg = ", ".join(missing_models)
-    raise RuntimeError(
-        f"No trained models found for: {msg}. "
-        f"Please train with: python GNN_Main.py -o generate_train <config_name>"
-    )
+    config = configs[config_name]
+    log_dir = log_path(config.config_file)
+    model_dir = os.path.join(log_dir, "models")
+    model_exists = os.path.isdir(model_dir) and any(
+        f.startswith("best_model") for f in os.listdir(model_dir)
+    ) if os.path.isdir(model_dir) else False
+    print()
+    print(f"--- {label} ---")
+    if model_exists:
+        print(f"  trained model already present in {model_dir}/")
+        print("  skipping training. To retrain, delete the log folder:")
+        print(f"    rm -rf {log_dir}")
+    else:
+        print(f"  training on {config.simulation.n_frames} frames")
+        print(f"  {config.training.n_epochs} epochs, batch_size={config.training.batch_size}")
+        print()
+        data_train(config, device=device)
 
 # %%
 def parse_plot_results(log_dir):
