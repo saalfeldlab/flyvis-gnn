@@ -18,9 +18,10 @@ import os
 import sys
 
 import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import numpy as np
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
 
 # Remove the script dir Python auto-inserts: src/flyvis_gnn/models/ contains
 # flyvis_gnn.py which would shadow the flyvis_gnn package if left in sys.path.
@@ -33,11 +34,11 @@ _repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.
 sys.path.insert(0, os.path.join(_repo_root, 'src'))  # for flyvis_gnn package
 sys.path.insert(0, _repo_root)                        # for GNN_PlotFigure
 
-from GNN_PlotFigure import data_plot
 from flyvis_gnn.config import NeuralGraphConfig
 from flyvis_gnn.generators.graph_data_generator import data_generate
 from flyvis_gnn.models.graph_trainer import data_test, data_train
 from flyvis_gnn.utils import add_pre_folder, graphs_data_path, log_path, set_device
+from GNN_PlotFigure import data_plot  # noqa: E402
 
 
 METRICS = [
@@ -148,13 +149,13 @@ def run_cv(config_name, seeds):
             data_train(config, device=device)
 
         # --- Test ---
-        print(f"  testing...")
+        print("  testing...")
         data_test(config=config, visualize=True, style="color name continuous_slice",
                   verbose=False, best_model='best', run=0, step=10,
                   n_rollout_frames=250, device=device)
 
         # --- Plot / analyse ---
-        print(f"  analysing...")
+        print("  analysing...")
         data_plot(config=config, config_file=config.config_file,
                   epoch_list=['best'], style='color', extended='plots',
                   device=device)
