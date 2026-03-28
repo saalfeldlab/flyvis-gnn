@@ -74,8 +74,8 @@ if __name__ == "__main__":
                 test_config_name = None
     else:
         best_model = ''
-        task = task = 'traimn'
-        config_list = ['flyvis_noise_005']
+        task = task = 'train'
+        config_list = ['flyvis_noise_005_null_edges_100']
         test_config_name = None
 
     if task == 'cv':
@@ -170,4 +170,3 @@ if __name__ == "__main__":
 
 # python GNN_Main.py -o test flyvis_noise_005 best flyvis_noise_free
 # python GNN_Main.py -o cv flyvis_noise_005 --n_seeds 10
-# python GNN_Main.py -o cv flyvis_noise_005 --seeds 42,43,44,45,46

@@ -60,13 +60,20 @@ training:
   coeff_g_phi_diff: 750
   coeff_f_theta_msg_diff: 0
   coeff_g_phi_norm: 0.9
-  coeff_g_phi_weight_L1: 0.28
-  coeff_f_theta_weight_L1: 0.05
+  coeff_g_phi_weight_L1: 0
+  coeff_f_theta_weight_L1: 0
   coeff_g_phi_weight_L2: 0
-  coeff_f_theta_weight_L2: 0.001
-  coeff_W_L1: 0.00015
-  coeff_W_L2: 1.5e-06
+  coeff_f_theta_weight_L2: 0
+  coeff_W_L1: 0
+  coeff_W_L2: 0
   w_init_mode: "randn_scaled"
   use_gt_edges: true
-  regul_annealing_rate: 0
-  seed: 43
+  regul_annealing_rate: 0.5
+claude:
+  n_epochs: 1
+  data_augmentation_loop: 35
+  n_iter_block: 12
+  ucb_c: 1.414
+  generate_data: true
+  training_time_target_min: 90
+  node_name: a100
