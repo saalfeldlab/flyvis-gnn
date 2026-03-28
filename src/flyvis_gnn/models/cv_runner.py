@@ -39,7 +39,7 @@ from flyvis_gnn.generators.graph_data_generator import data_generate
 from flyvis_gnn.models.graph_trainer import data_test, data_train
 from flyvis_gnn.utils import add_pre_folder, graphs_data_path, log_path, set_device
 
-from GNN_PlotFigure import data_plot  # noqa: E402, I001
+from GNN_PlotFigure import data_plot
 
 
 METRICS = [
