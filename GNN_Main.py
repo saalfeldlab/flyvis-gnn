@@ -91,10 +91,23 @@ if __name__ == "__main__":
         print(" ")
         config_file, pre_folder = add_pre_folder(config_file_)
 
-        # load config
-        config = NeuralGraphConfig.from_yaml(config_path(f"{config_file}.yaml"))
-        config.dataset = pre_folder + config.dataset
-        config.config_file = pre_folder + config_file_
+        # load config — if YAML not found, try stripping _cvNN suffix (CV folds
+        # share a base config; the cv_runner overrides dataset/config_file at runtime)
+        import re
+        yaml_path = config_path(f"{config_file}.yaml")
+        cv_match = re.search(r'_cv(\d+)$', config_file_)
+        if not os.path.isfile(yaml_path) and cv_match:
+            base_name = config_file_[:cv_match.start()]
+            base_file, _ = add_pre_folder(base_name)
+            print(f"  CV fold detected: loading base config {base_name}.yaml, "
+                  f"dataset/log -> {config_file_}")
+            config = NeuralGraphConfig.from_yaml(config_path(f"{base_file}.yaml"))
+            config.dataset = pre_folder + config_file_
+            config.config_file = pre_folder + config_file_
+        else:
+            config = NeuralGraphConfig.from_yaml(yaml_path)
+            config.dataset = pre_folder + config.dataset
+            config.config_file = pre_folder + config_file_
 
         if device == []:
             device = set_device(config.training.device)
