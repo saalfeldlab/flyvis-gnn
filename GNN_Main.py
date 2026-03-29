@@ -106,7 +106,8 @@ if __name__ == "__main__":
             config.config_file = pre_folder + config_file_
         else:
             config = NeuralGraphConfig.from_yaml(yaml_path)
-            config.dataset = pre_folder + config.dataset
+            if not config.dataset.startswith(pre_folder):
+                config.dataset = pre_folder + config.dataset
             config.config_file = pre_folder + config_file_
 
         if device == []:
