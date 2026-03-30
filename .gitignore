@@ -4,8 +4,35 @@ data_paths.json
 # Track only config/fly/, ignore all other config subfolders
 config/*
 !config/fly/
-config/fly/archive/
-config/fly/archive_2/
+
+# Only track used flyvis configs (referenced in Notebooks/GNN_Main/GNN_PlotFigure)
+config/fly/*
+!config/fly/flyvis_noise_free.yaml
+!config/fly/flyvis_noise_free_known_ode.yaml
+!config/fly/flyvis_noise_free_mask_50.yaml
+!config/fly/flyvis_noise_005.yaml
+!config/fly/flyvis_noise_005_002.yaml
+!config/fly/flyvis_noise_005_004.yaml
+!config/fly/flyvis_noise_005_006.yaml
+!config/fly/flyvis_noise_005_008.yaml
+!config/fly/flyvis_noise_005_010.yaml
+!config/fly/flyvis_noise_005_INR.yaml
+!config/fly/flyvis_noise_005_INR_known_ode.yaml
+!config/fly/flyvis_noise_005_agentic.yaml
+!config/fly/flyvis_noise_005_default.yaml
+!config/fly/flyvis_noise_005_known_ode.yaml
+!config/fly/flyvis_noise_005_mask_50.yaml
+!config/fly/flyvis_noise_005_null_edges_100.yaml
+!config/fly/flyvis_noise_005_null_edges_pc_100.yaml
+!config/fly/flyvis_noise_005_null_edges_pc_200.yaml
+!config/fly/flyvis_noise_005_null_edges_pc_400.yaml
+!config/fly/flyvis_noise_005_removed_pc_02.yaml
+!config/fly/flyvis_noise_005_removed_pc_05.yaml
+!config/fly/flyvis_noise_005_removed_pc_10.yaml
+!config/fly/flyvis_noise_005_removed_pc_20.yaml
+!config/fly/flyvis_noise_05.yaml
+!config/fly/flyvis_noise_05_known_ode.yaml
+!config/fly/flyvis_noise_05_mask_50.yaml
 
 # Data files (large simulation data)
 *.npy
