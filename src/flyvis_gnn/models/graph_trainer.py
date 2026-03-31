@@ -385,7 +385,8 @@ def data_train_flyvis(config, erase, best_model, device, log_file=None):
             visual_input_list = []
             ids_index = 0
 
-            loss = 0
+            loss = torch.zeros(1, device=device)
+            regularizer.reset_iteration()
 
             # Consecutive batch: pick one random start, use batch_size consecutive frames
             if tc.consecutive_batch:
@@ -415,9 +416,6 @@ def data_train_flyvis(config, erase, best_model, device, log_file=None):
                     visual_input = model.forward_visual(x, k)
                     x.stimulus[:model.n_input_neurons] = visual_input.squeeze(-1)
                     x.stimulus[model.n_input_neurons:] = 0
-
-                loss = torch.zeros(1, device=device)
-                regularizer.reset_iteration()
 
                 if not (torch.isnan(x.voltage).any()):
                     regul_loss = regularizer.compute(
