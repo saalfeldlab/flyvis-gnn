@@ -8,9 +8,10 @@ assets/*.html filter=lfs diff=lfs merge=lfs -text
 .quarto/_freeze/**/*.png filter=lfs diff=lfs merge=lfs -text
 log/fly/flyvis_noise_005_INR/models/* filter=lfs diff=lfs merge=lfs -text
 log/fly/*/models/*.pt filter=lfs diff=lfs merge=lfs -text
-*.pt filter=lfs diff=lfs merge=lfs -text
+log/**/models/*.pt filter=lfs diff=lfs merge=lfs -text
 log/fly/flyvis_noise_005_INR/models/inr_stimulus_2.pt filter=lfs diff=lfs merge=lfs -text
 log/fly/flyvis_noise_005_INR/models/best_model_with_0_graphs_2.pt filter=lfs diff=lfs merge=lfs -text
+*.pt filter=lfs diff=lfs merge=lfs -text
 log/fly/flyvis_noise_005_null_edges_pc_100/models/best_model_with_0_graphs_0.pt filter=lfs diff=lfs merge=lfs -text
 log/fly/flyvis_noise_005_null_edges_pc_200/models/best_model_with_0_graphs_0.pt filter=lfs diff=lfs merge=lfs -text
 log/fly/flyvis_noise_005_null_edges_pc_400/models/best_model_with_0_graphs_0.pt filter=lfs diff=lfs merge=lfs -text
