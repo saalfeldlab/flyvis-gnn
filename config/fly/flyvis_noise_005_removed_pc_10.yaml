@@ -76,4 +76,4 @@ claude:
   ucb_c: 1.414
   generate_data: true
   training_time_target_min: 85
-  node_name: a100
+  node_name: l4
