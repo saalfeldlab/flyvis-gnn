@@ -103,16 +103,11 @@ for config_name, label in datasets:
 # grayscale luminance, and resampled onto the hexagonal photoreceptor
 # lattice of 217 columns via a Gaussian box-eye filter (extent 8,
 # kernel size 13).  Each column feeds 8 photoreceptor types (R1–R8),
-# giving 1,736 input neurons.  Videos longer than 80 frames are split
-# into 50-frame chunks; temporal interpolation resamples each chunk to
-# match the simulation time step $\Delta t = 0.02$.
-#
-# The full set of sequences is augmented with horizontal and vertical
+# giving 1,736 input neurons. The full set of sequences is augmented with horizontal and vertical
 # flips and four rotations (0°, 90°, 180°, 270°) of the hexagonal
 # array.  All augmentations of the same base video are kept together and
-# the dataset is split 80/20 at the *base-video level* to prevent data
-# leakage between training and testing.  The sequences within each split
-# are shuffled (seed 42) and concatenated into a continuous stimulus
+# the dataset is split 80/20 ensuring that there is no leakage between training and testing.  
+# The sequences within each split are shuffled (seed 42) and concatenated into a continuous stimulus
 # stream.
 
 # %%
@@ -264,21 +259,21 @@ if os.path.isfile(stimulus_video_path):
 
 # %%
 #| lightbox: true
-display_image(f"{graphs_dirs['flyvis_noise_free']}/activity.png", width=850)
+display_image(f"{graphs_dirs['flyvis_noise_free']}/activity_traces.png", width=850)
 
 # %% [markdown]
 # ### Low noise ($\sigma = 0.05$)
 
 # %%
 #| lightbox: true
-display_image(f"{graphs_dirs['flyvis_noise_005']}/activity.png", width=850)
+display_image(f"{graphs_dirs['flyvis_noise_005']}/activity_traces.png", width=850)
 
 # %% [markdown]
 # ### High noise ($\sigma = 0.5$)
 
 # %%
 #| lightbox: true
-display_image(f"{graphs_dirs['flyvis_noise_05']}/activity.png", width=850)
+display_image(f"{graphs_dirs['flyvis_noise_05']}/activity_traces.png", width=850)
 
 # %% [markdown]
 # ## References

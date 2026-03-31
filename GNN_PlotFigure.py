@@ -1326,6 +1326,20 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, extende
             plt.savefig(f'{log_dir}/results/embedding_augmented_{config_indices}.png', dpi=300)
             plt.close()
 
+            # Write clean key-value metrics file for Notebook_04
+            metrics_path = os.path.join(log_dir, 'results', 'metrics.txt')
+            if r_squared is not None:
+                with open(metrics_path, 'w') as mf:
+                    mf.write(f"W_corrected_R2: {r_squared:.4f}\n")
+                    mf.write(f"W_corrected_slope: {slope_corrected:.4f}\n")
+                    mf.write(f"tau_R2: {r_squared_tau:.4f}\n")
+                    mf.write(f"V_rest_R2: {r_squared_V_rest:.4f}\n")
+            try:
+                with open(metrics_path, 'a') as mf:
+                    mf.write(f"clustering_accuracy: {cluster_acc:.4f}\n")
+            except NameError:
+                pass
+
     # ---- Activity traces: clean vs noisy (measurement noise) ----
     if getattr(sim, 'measurement_noise_level', 0) > 0:
         try:
@@ -1532,21 +1546,7 @@ def analyze_neuron_type_reconstruction(config, model, edges, true_weights, gt_ta
     logger.info(f"mean tau RMSE: {np.mean(rmse_taus):.3f} ± {np.std(rmse_taus):.3f}")
     logger.info(f"mean V_rest RMSE: {np.mean(rmse_vrests):.3f} ± {np.std(rmse_vrests):.3f}")
 
-    # Write clean key-value metrics file for Notebook_04
-    metrics_path = os.path.join(log_dir, 'results', 'metrics.txt')
-    if r_squared is not None:
-        with open(metrics_path, 'w') as mf:
-            mf.write(f"W_corrected_R2: {r_squared:.4f}\n")
-            mf.write(f"W_corrected_slope: {slope_corrected:.4f}\n")
-            mf.write(f"tau_R2: {r_squared_tau:.4f}\n")
-            mf.write(f"V_rest_R2: {r_squared_V_rest:.4f}\n")
-    try:
-        with open(metrics_path, 'a') as mf:
-            mf.write(f"clustering_accuracy: {cluster_acc:.4f}\n")
-    except NameError:
-        pass
-
-    # Return per-neuron results (NEW)
+    # Return per-neuron results 
     return {
         'rmse_weights_per_neuron': rmse_weights_per_neuron,
         'rmse_tau_per_neuron': rmse_tau_per_neuron,
@@ -1555,7 +1555,7 @@ def analyze_neuron_type_reconstruction(config, model, edges, true_weights, gt_ta
         'rmse_tau_per_type': rmse_taus,
         'rmse_vrest_per_type': rmse_vrests
     }
-    pass  # Implement as needed
+    pass  
 
 
 def plot_neuron_activity_analysis(activity, target_type_name_list, type_list, index_to_name, n_neurons, n_frames, delta_t, output_path):

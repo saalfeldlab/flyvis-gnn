@@ -74,8 +74,8 @@ if __name__ == "__main__":
                 test_config_name = None
     else:
         best_model = ''
-        task = task = 'train'
-        config_list = ['flyvis_noise_005_null_edges_100']
+        task = task = 'plot'
+        config_list = ['flyvis_noise_005']
         test_config_name = None
 
     if task == 'cv':
