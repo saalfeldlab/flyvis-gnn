@@ -321,6 +321,7 @@ def data_train_flyvis(config, erase, best_model, device, log_file=None):
         field_R2 = None
         field_slope = None
         pbar = trange(Niter, ncols=150)
+        
         # === LLM-MODIFIABLE: TRAINING LOOP START ===
         # Main training loop. Suggested changes: loss function, gradient clipping,
         # data sampling strategy, LR scheduler steps, early stopping.
@@ -418,17 +419,19 @@ def data_train_flyvis(config, erase, best_model, device, log_file=None):
                     x.stimulus[model.n_input_neurons:] = 0
 
                 if not (torch.isnan(x.voltage).any()):
-                    regul_loss = regularizer.compute(
-                        model=model,
-                        x=x,
-                        in_features=None,
-                        ids=ids,
-                        ids_batch=None,
-                        edges=edges,
-                        device=device,
-                        xnorm=xnorm
-                    )
-                    loss = loss + regul_loss
+
+                    if batch==0:  # apply regularization only once
+                        regul_loss = regularizer.compute(
+                            model=model,
+                            x=x,
+                            in_features=None,
+                            ids=ids,
+                            ids_batch=None,
+                            edges=edges,
+                            device=device,
+                            xnorm=xnorm
+                        )
+                        loss = loss + regul_loss
 
                     if tc.recurrent_training or tc.neural_ODE_training:
                         y = x_ts.voltage[k + tc.time_step].unsqueeze(-1)

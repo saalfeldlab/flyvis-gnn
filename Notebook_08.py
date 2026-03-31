@@ -133,21 +133,6 @@ def display_image(path, width=700):
 # (LR scheduling, recurrent training, derivative smoothing,
 # stronger L1/L2 regularization, $f_\theta$ message monotonicity)
 # either degraded or catastrophically broke training.
-#
-# On the $\sigma_{\text{meas}} = 0.04$ condition, the optimized
-# config achieves connectivity $R^2 = 0.925 \pm 0.003$
-# (CV = 0.3\% across 4 seeds), compared to $R^2 \approx 0.82$
-# with default parameters.
-#
-# Synaptic weight recovery decreases from
-# $R^2 = 0.96$ at $\sigma_{\text{meas}} = 0.02$ to $0.76$ at
-# $\sigma_{\text{meas}} = 0.10$, while time constants remain
-# robust ($R^2 > 0.85$ across all conditions).
-# Resting potentials are the most sensitive to measurement noise,
-# dropping below $R^2 = 0.05$ for
-# $\sigma_{\text{meas}} \geq 0.06$, consistent with the
-# $\sim 1/\Delta t$ amplification of noise in the derivative
-# targets that $V^{\text{rest}}$ depends on.
 
 # %%
 #| output: false
@@ -426,18 +411,3 @@ for config_name, table_label, label in datasets:
 for config_name, table_label, label in datasets:
     display(Markdown(f"### {label}"))
     show_result("eigen_comparison.png", config_name, width=900)
-
-# %% [markdown]
-# ## References
-#
-# [1] J. K. Lappalainen et al., "Connectome-constrained networks predict
-# neural activity across the fly visual system," *Nature*, 2024.
-# [doi:10.1038/s41586-024-07939-3](https://doi.org/10.1038/s41586-024-07939-3)
-#
-# [2] C. Allier, L. Heinrich, M. Schneider, S. Saalfeld, "Graph
-# neural networks uncover structure and functions underlying the
-# activity of simulated neural assemblies," *arXiv:2602.13325*,
-# 2026.
-# [doi:10.48550/arXiv.2602.13325](https://doi.org/10.48550/arXiv.2602.13325)
-
-# %%

@@ -86,12 +86,9 @@ def display_image(path, width=700):
 # neuron pairs not already connected.  The GNN architecture and
 # training hyperparameters are otherwise identical across conditions.
 #
-# The GNN is robust to null-edge contamination: even
-# with 4x as many spurious edges as real ones, it recovers
-# synaptic weights, biophysical parameters, and neuron-type
-# identity with only modest degradation.  The model effectively
-# learns to assign near-zero weights to the null edges while
-# preserving the true synaptic structure.
+# The GNN tolerates significant null-edge addition: even with addition of 2M of null edges
+# it recovers the remaining synaptic weights and biophysical parameters with $R^2>0.8$.
+
 
 # %%
 #| output: false
@@ -414,15 +411,3 @@ for key in ['RMSE', 'Pearson r']:
 
 display(Markdown("\n".join(rows)))
 
-# %% [markdown]
-# ## References
-#
-# [1] J. K. Lappalainen et al., "Connectome-constrained networks predict
-# neural activity across the fly visual system," *Nature*, 2024.
-# [doi:10.1038/s41586-024-07939-3](https://doi.org/10.1038/s41586-024-07939-3)
-#
-# [2] C. Allier, L. Heinrich, M. Schneider, S. Saalfeld, "Graph
-# neural networks uncover structure and functions underlying the
-# activity of simulated neural assemblies," *arXiv:2602.13325*,
-# 2026.
-# [doi:10.48550/arXiv.2602.13325](https://doi.org/10.48550/arXiv.2602.13325)

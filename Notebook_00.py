@@ -105,10 +105,7 @@ for config_name, label in datasets:
 # kernel size 13).  Each column feeds 8 photoreceptor types (R1–R8),
 # giving 1,736 input neurons. The full set of sequences is augmented with horizontal and vertical
 # flips and four rotations (0°, 90°, 180°, 270°) of the hexagonal
-# array.  All augmentations of the same base video are kept together and
-# the dataset is split 80/20 ensuring that there is no leakage between training and testing.  
-# The sequences within each split are shuffled (seed 42) and concatenated into a continuous stimulus
-# stream.
+# array. The dataset is split 80/20 ensuring that there is no leakage between training and testing.
 
 # %%
 #| echo: true

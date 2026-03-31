@@ -16,7 +16,7 @@
 # ## Graph Neural Network Model
 #
 # We approximated the simulated voltage dynamics by a message-passing
-# GNN [2]:
+# GNN [1]:
 #
 # $$\frac{\widehat{dv}_i(t)}{dt} = f_\theta\!\left(v_i(t),\,\mathbf{a}_i,\,\sum_{j\in\mathcal{N}_i} \widehat{W}_{ij}\,g_\phi\!\big(v_j(t),\,\mathbf{a}_j\big)^2,\,I_i(t)\right).$$
 #
@@ -47,8 +47,8 @@
 # ### Degeneracy of the Inverse Problem
 #
 # The inverse problem solved by the GNN is **ill-posed**: recovering five coupled
-# components ($\widehat{W}$, $\tau$, $V^{\text{rest}}$, $f_\theta$,
-# $g_\phi$) from voltage traces alone is under-determined.  Many
+# components, $\widehat{W}$, $\tau$, $V^{\text{rest}}$, $f_\theta$,
+# and $g_\phi$ from voltage traces alone is under-determined.  Many
 # different parameter combinations can produce indistinguishable
 # voltage predictions.  This degeneracy manifests as **seed
 # dependence**: slight differences in the random initialization,
@@ -56,10 +56,8 @@
 # toward a different optimum on the degenerate solution landscape.
 #
 # The regularization terms below address this degeneracy by
-# constraining the solution space: simplicity penalties on the MLPs
-# shrink the set of degenerate solutions, monotonicity enforces
-# biophysical priors on $g_\phi$, and sparsity on $\widehat{W}$
-# favors connectivity patterns consistent with the true circuit.
+# constraining the solution space: simplicity penalties on the MLPs,
+# monotonicity priors on $g_\phi$, and sparsity on $\widehat{W}$.
 # A systematic approach to quantifying and reducing degeneracy
 # through agentic hyper-parameter optimization is presented in [Notebook 09](Notebook_09.html).
 #
@@ -75,6 +73,8 @@
 # mappings, reducing the space of degenerate solutions that fit the
 # observed derivatives equally well.  The $\ell_1$ term
 # ($\lambda_2$) additionally promotes sparsity in
+# the connectivity matrix. The $\ell_2$ term
+# ($\gamma_2$) promotes low values in
 # the connectivity matrix. The derivative
 # term ($\mu_0$) enforces that the edge message $g_\phi$ increases
 # monotonically with voltage, and the normalization term ($\mu_1$)
@@ -146,9 +146,9 @@ def display_image(path, width=700):
 # | `embedding_dim` | 4 | 2 | 2 |
 # | $N_\text{iter}$ / epoch | 128,000 | 112,000 | 128,000 |
 # | $N_\text{iter}$ total | 640,000 | 112,000 | 128,000 |
-# | `learning_rate_W_start` | 6e-4 | 9e-4 | 6e-4 |
-# | `learning_rate_start` ($g_\phi$, $f_\theta$) | 1.8e-3 | 1.8e-3 | 1.2e-3 |
-# | `learning_rate_embedding_start` | 1.55e-3 | 2.3e-3 | 1.55e-3 |
+# | `learning_rate_W` | 6e-4 | 9e-4 | 6e-4 |
+# | `learning_rate` ($g_\phi$, $f_\theta$) | 1.8e-3 | 1.8e-3 | 1.2e-3 |
+# | `learning_rate_embedding` | 1.55e-3 | 2.3e-3 | 1.55e-3 |
 # | `coeff_g_phi_diff` ($\mu_0$) | 1500 | 750 | 750 |
 # | `coeff_g_phi_norm` ($\mu_1$) | 0 | 0.9 | 0.9 |
 # | `coeff_g_phi_weight_L1` ($\lambda_1$) | 0 | 0.28 | 0.28 |
@@ -264,10 +264,6 @@ else:
 # %% [markdown]
 # ## References
 #
-# [1] J. K. Lappalainen et al., "Connectome-constrained networks predict
-# neural activity across the fly visual system," *Nature*, 2024.
-# [doi:10.1038/s41586-024-07939-3](https://doi.org/10.1038/s41586-024-07939-3)
-#
-# [2] J. Gilmer et al., "Neural Message Passing for Quantum Chemistry,"
+# [1] J. Gilmer et al., "Neural Message Passing for Quantum Chemistry,"
 # 2017.
 # [doi:10.48550/arXiv.1704.01212](https://doi.org/10.48550/arXiv.1704.01212)

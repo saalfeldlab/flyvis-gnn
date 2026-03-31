@@ -324,14 +324,3 @@ display(Markdown("\n".join(nf_rows)))
 # extracts the systematic circuit computation from stochastic
 # observations without any explicit noise model or denoising
 # objective.
-
-# %% [markdown]
-# ## References
-#
-# [1] J. K. Lappalainen et al., "Connectome-constrained networks predict
-# neural activity across the fly visual system," *Nature*, 2024.
-# [doi:10.1038/s41586-024-07939-3](https://doi.org/10.1038/s41586-024-07939-3)
-#
-# [2] J. Gilmer et al., "Neural Message Passing for Quantum Chemistry,"
-# 2017.
-# [doi:10.48550/arXiv.1704.01212](https://doi.org/10.48550/arXiv.1704.01212)

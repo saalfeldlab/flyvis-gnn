@@ -88,10 +88,8 @@ def display_image(path, width=700):
 # conditions.
 #
 # The GNN tolerates significant edge removal: even with 20% of
-# connections missing, it recovers the remaining synaptic weights
-# and biophysical parameters with high fidelity.  This suggests
-# the model exploits redundancy in the network dynamics to
-# compensate for incomplete connectivity information.
+# connections missing, it can recovers to a certain extent the remaining synaptic weights
+# and biophysical parameters.
 
 # %%
 #| output: false
@@ -414,16 +412,3 @@ for key in ['RMSE', 'Pearson r']:
     rows.append(f"| {key} | " + " | ".join(cells) + " |")
 
 display(Markdown("\n".join(rows)))
-
-# %% [markdown]
-# ## References
-#
-# [1] J. K. Lappalainen et al., "Connectome-constrained networks predict
-# neural activity across the fly visual system," *Nature*, 2024.
-# [doi:10.1038/s41586-024-07939-3](https://doi.org/10.1038/s41586-024-07939-3)
-#
-# [2] C. Allier, L. Heinrich, M. Schneider, S. Saalfeld, "Graph
-# neural networks uncover structure and functions underlying the
-# activity of simulated neural assemblies," *arXiv:2602.13325*,
-# 2026.
-# [doi:10.48550/arXiv.2602.13325](https://doi.org/10.48550/arXiv.2602.13325)

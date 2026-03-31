@@ -18,18 +18,12 @@
 
 #
 # A well-trained dynamical model should capture the circuit's
-# computational rules, not merely memorize its specific activities.  
-# To test this, we randomly ablated 50% of the synaptic connections and
-# regenerated the ground truth under the ablated connectivity.
-# The same edge mask is then applied to the GNN's learned weights
-# $\widehat{W}_{ij}$, so both the simulator and the model operate on
-# identical reduced circuits.  If the GNN has learned the correct
-# message-passing functions $f_\theta$ and $g_\phi$, it should
-# generalize to the reduced connectivity without retraining.
-# We tested robustness at three noise levels: $\sigma = 0$
-# (noise-free), $\sigma = 0.05$ (low noise), and $\sigma = 0.5$
-# (high noise). The test is performed using the best
-# models in ([Notebook 01](Notebook_01.html)).
+# computational rules, not merely memorize its specific activities.To test this, we randomly ablated 50% of the synaptic connections and
+# regenerated the ground truth under the ablated connectivity. The same edge mask is then applied to the GNN's learned weights
+# $\widehat{W}_{ij}$, so both the simulator and the model operate on identical reduced circuits.  If the GNN has learned the correct
+# message-passing functions $f_\theta$ and $g_\phi$, it should generalize to the reduced connectivity without retraining.
+# We tested robustness at three noise levels: $\sigma = 0$ noise-free), $\sigma = 0.05$ (low noise), and $\sigma = 0.5$
+# (high noise). The test is performed using the best models in ([Notebook 01](Notebook_01.html)).
 
 # %%
 #| output: false
@@ -107,7 +101,7 @@ device = set_device(base_configs[base_datasets[0][0]].training.device)
 #
 # For each noise condition, the simulator regenerates voltage
 # traces with 50% of edges randomly zeroed.
-# he resulting ablation mask (a boolean tensor
+# The resulting ablation mask (a boolean tensor
 # indicating which edges survive) is saved alongside the data so
 # that the exact same mask can be applied to the GNN's learned
 # weights at test time.  This ensures a fair comparison: both the
@@ -364,14 +358,3 @@ display(Markdown("\n".join(nf_rows)))
 # generalize across both noise conditions and connectivity
 # perturbations, rather than being overfitted to the specific training
 # dataset.
-
-# %% [markdown]
-# ## References
-#
-# [1] J. K. Lappalainen et al., "Connectome-constrained networks predict
-# neural activity across the fly visual system," *Nature*, 2024.
-# [doi:10.1038/s41586-024-07939-3](https://doi.org/10.1038/s41586-024-07939-3)
-#
-# [2] J. Gilmer et al., "Neural Message Passing for Quantum Chemistry,"
-# 2017.
-# [doi:10.48550/arXiv.1704.01212](https://doi.org/10.48550/arXiv.1704.01212)
