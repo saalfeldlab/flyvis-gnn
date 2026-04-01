@@ -87,7 +87,7 @@ def display_image(path, width=700):
 # training hyperparameters are otherwise identical across conditions.
 #
 # The GNN tolerates significant null-edge addition: even with addition of 2M of null edges
-# it recovers the remaining synaptic weights and biophysical parameters with $R^2>0.8$.
+# it recovers the remaining synaptic weights and biophysical parameters with $R^2>0.9$.
 
 
 # %%
