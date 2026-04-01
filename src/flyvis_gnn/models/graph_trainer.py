@@ -202,7 +202,7 @@ def data_train_flyvis(config, erase, best_model, device, log_file=None):
     learning_rate_NNR = tc.learning_rate_NNR
     learning_rate_NNR_f = tc.learning_rate_NNR_f
 
-    _logger.info(f'learning rates: lr_W {lr_W}, lr {lr}, lr_update {lr_update}, lr_embedding {lr_embedding}, learning_rate_NNR {learning_rate_NNR}')
+    _logger.info(f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, learning_rate_NNR_f {learning_rate_NNR_f}')
 
     optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr,
                                                          lr_update=lr_update, lr_W=lr_W, learning_rate_NNR=learning_rate_NNR, learning_rate_NNR_f = learning_rate_NNR_f)
