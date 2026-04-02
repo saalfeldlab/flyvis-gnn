@@ -56,19 +56,19 @@ training:
   data_augmentation_loop: 35
   lr_W: 0.0009
   lr: 0.0018
-  lr_embedding: 0.002325
+  lr_embedding: 0.0025
   coeff_g_phi_diff: 750
   coeff_f_theta_msg_diff: 0
   coeff_g_phi_norm: 0.9
-  coeff_g_phi_weight_L1: 0
-  coeff_f_theta_weight_L1: 0
+  coeff_g_phi_weight_L1: 0.28
+  coeff_f_theta_weight_L1: 0.05
   coeff_g_phi_weight_L2: 0
-  coeff_f_theta_weight_L2: 0
-  coeff_W_L1: 0
-  coeff_W_L2: 0
+  coeff_f_theta_weight_L2: 0.001
+  coeff_W_L1: 0.00015
+  coeff_W_L2: 1.5e-06
   w_init_mode: "randn_scaled"
+  regul_annealing_rate: 0.0
   use_gt_edges: true
-  regul_annealing_rate: 0.5
 claude:
   n_epochs: 1
   data_augmentation_loop: 35
