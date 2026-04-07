@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Allier, Lappalainen, Saalfeld">
+<meta name="description" content="Agentic hyper-parameter optimization addresses the ill-posedness of circuit recovery across three noise regimes, discovering that identifiability fails for different reasons at each level and finding distinct solutions through hypothesis-driven reasoning.">
+
+<title>Agentic Hyper-Parameter Optimization: Addressing Identifiability – FlyVis-GNN</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-f418161beb48e0141c760e455f12af2c.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-1b0245fd8715271636a5b948b6a93c7c.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-54a424d5da18b3909adf4788aabbfdea.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-1b0245fd8715271636a5b948b6a93c7c.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+    const toggleBodyColorMode = (bsSheetEl) => {
+      const mode = bsSheetEl.getAttribute("data-mode");
+      const bodyEl = window.document.querySelector("body");
+      if (mode === "dark") {
+        bodyEl.classList.add("quarto-dark");
+        bodyEl.classList.remove("quarto-light");
+      } else {
+        bodyEl.classList.add("quarto-light");
+        bodyEl.classList.remove("quarto-dark");
+      }
+    }
+    const toggleBodyColorPrimary = () => {
+      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
+      if (bsSheetEl) {
+        toggleBodyColorMode(bsSheetEl);
+      }
+    }
+    const setColorSchemeToggle = (alternate) => {
+      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+      for (let i=0; i < toggles.length; i++) {
+        const toggle = toggles[i];
+        if (toggle) {
+          if (alternate) {
+            toggle.classList.add("alternate");
+          } else {
+            toggle.classList.remove("alternate");
+          }
+        }
+      }
+    };
+    const toggleColorMode = (alternate) => {
+      // Switch the stylesheets
+      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
+      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+      manageTransitions('#quarto-margin-sidebar .nav-link', false);
+      if (alternate) {
+        // note: dark is layered on light, we don't disable primary!
+        enableStylesheet(alternateStylesheets);
+        for (const sheetNode of alternateStylesheets) {
+          if (sheetNode.id === "quarto-bootstrap") {
+            toggleBodyColorMode(sheetNode);
+          }
+        }
+      } else {
+        disableStylesheet(alternateStylesheets);
+        enableStylesheet(primaryStylesheets)
+        toggleBodyColorPrimary();
+      }
+      manageTransitions('#quarto-margin-sidebar .nav-link', true);
+      // Switch the toggles
+      setColorSchemeToggle(alternate)
+      // Hack to workaround the fact that safari doesn't
+      // properly recolor the scrollbar when toggling (#1455)
+      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+        manageTransitions("body", false);
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          manageTransitions("body", true);
+        }, 40);
+      }
+    }
+    const disableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        stylesheet.rel = 'disabled-stylesheet';
+      }
+    }
+    const enableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
+          stylesheet.rel = 'stylesheet';
+        }
+      }
+    }
+    const manageTransitions = (selector, allowTransitions) => {
+      const els = window.document.querySelectorAll(selector);
+      for (let i=0; i < els.length; i++) {
+        const el = els[i];
+        if (allowTransitions) {
+          el.classList.remove('notransition');
+        } else {
+          el.classList.add('notransition');
+        }
+      }
+    }
+    const isFileUrl = () => {
+      return window.location.protocol === 'file:';
+    }
+    const hasAlternateSentinel = () => {
+      let styleSentinel = getColorSchemeSentinel();
+      if (styleSentinel !== null) {
+        return styleSentinel === "alternate";
+      } else {
+        return false;
+      }
+    }
+    const setStyleSentinel = (alternate) => {
+      const value = alternate ? "alternate" : "default";
+      if (!isFileUrl()) {
+        window.localStorage.setItem("quarto-color-scheme", value);
+      } else {
+        localAlternateSentinel = value;
+      }
+    }
+    const getColorSchemeSentinel = () => {
+      if (!isFileUrl()) {
+        const storageValue = window.localStorage.getItem("quarto-color-scheme");
+        return storageValue != null ? storageValue : localAlternateSentinel;
+      } else {
+        return localAlternateSentinel;
+      }
+    }
+    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+      let newTheme = '';
+      if(authorPrefersDark) {
+        newTheme = isAlternate ? baseTheme : alternateTheme;
+      } else {
+        newTheme = isAlternate ? alternateTheme : baseTheme;
+      }
+      const changeGiscusTheme = () => {
+        // From: https://github.com/giscus/giscus/issues/336
+        const sendMessage = (message) => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          if (!iframe) return;
+          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+        }
+        sendMessage({
+          setConfig: {
+            theme: newTheme
+          }
+        });
+      }
+      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+      if (isGiscussLoaded) {
+        changeGiscusTheme();
+      }
+    };
+    const authorPrefersDark = false;
+    const darkModeDefault = authorPrefersDark;
+      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+    // Dark / light mode switch
+    window.quartoToggleColorScheme = () => {
+      // Read the current dark / light value
+      let toAlternate = !hasAlternateSentinel();
+      toggleColorMode(toAlternate);
+      setStyleSentinel(toAlternate);
+      toggleGiscusIfUsed(toAlternate, darkModeDefault);
+      window.dispatchEvent(new Event('resize'));
+    };
+    // Switch to dark mode if need be
+    if (hasAlternateSentinel()) {
+      toggleColorMode(true);
+    } else {
+      toggleColorMode(false);
+    }
+  </script>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">FlyVis-GNN</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+    <a href="https://github.com/saalfeldlab/flyvis-gnn" title="" class="quarto-navigation-tool px-1" aria-label=""><i class="bi bi-github"></i></a>
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#agentic-hyper-parameter-optimization" id="toc-agentic-hyper-parameter-optimization" class="nav-link active" data-scroll-target="#agentic-hyper-parameter-optimization">Agentic Hyper-Parameter Optimization</a></li>
+  <li><a href="#identifiability-across-noise-regimes" id="toc-identifiability-across-noise-regimes" class="nav-link" data-scroll-target="#identifiability-across-noise-regimes">Identifiability Across Noise Regimes</a>
+  <ul class="collapse">
+  <li><a href="#noise-free-sigma-0" id="toc-noise-free-sigma-0" class="nav-link" data-scroll-target="#noise-free-sigma-0">Noise-free (<span class="math inline">\(\sigma = 0\)</span>)</a></li>
+  <li><a href="#low-noise-sigma-0.05" id="toc-low-noise-sigma-0.05" class="nav-link" data-scroll-target="#low-noise-sigma-0.05">Low noise (<span class="math inline">\(\sigma = 0.05\)</span>)</a></li>
+  <li><a href="#high-noise-sigma-0.5" id="toc-high-noise-sigma-0.5" class="nav-link" data-scroll-target="#high-noise-sigma-0.5">High noise (<span class="math inline">\(\sigma = 0.5\)</span>)</a></li>
+  <li><a href="#joint-gnn-siren-sigma-0.05-24-iterations-2-blocks" id="toc-joint-gnn-siren-sigma-0.05-24-iterations-2-blocks" class="nav-link" data-scroll-target="#joint-gnn-siren-sigma-0.05-24-iterations-2-blocks">Joint GNN + SIREN (<span class="math inline">\(\sigma = 0.05\)</span>): 24 iterations, 2 blocks</a></li>
+  <li><a href="#standalone-siren-sigma-0.05-152-iterations-13-blocks" id="toc-standalone-siren-sigma-0.05-152-iterations-13-blocks" class="nav-link" data-scroll-target="#standalone-siren-sigma-0.05-152-iterations-13-blocks">Standalone SIREN (<span class="math inline">\(\sigma = 0.05\)</span>): 152 iterations, 13 blocks</a></li>
+  </ul></li>
+  <li><a href="#running-the-agentic-pipeline" id="toc-running-the-agentic-pipeline" class="nav-link" data-scroll-target="#running-the-agentic-pipeline">Running the Agentic Pipeline</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/saalfeldlab/flyvis-gnn/blob/main/Notebook_09.py" class="toc-action"><i class="bi bi-github"></i>View source</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">Agentic Hyper-Parameter Optimization: Addressing Identifiability</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source" data-quarto-source-url="https://github.com/saalfeldlab/flyvis-gnn/blob/main/Notebook_09.py"><i class="bi"></i> Code</button></div></div>
+  <div class="quarto-categories">
+    <div class="quarto-category">FlyVis</div>
+    <div class="quarto-category">GNN</div>
+    <div class="quarto-category">Agentic Optimization</div>
+    <div class="quarto-category">Identifiability</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    Agentic hyper-parameter optimization addresses the ill-posedness of circuit recovery across three noise regimes, discovering that identifiability fails for different reasons at each level and finding distinct solutions through hypothesis-driven reasoning.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Allier, Lappalainen, Saalfeld </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="agentic-hyper-parameter-optimization" class="level2">
+<h2 class="anchored" data-anchor-id="agentic-hyper-parameter-optimization">Agentic Hyper-Parameter Optimization</h2>
+<p>The inverse problem solved by the GNN is <strong>ill-posed</strong>: recovering five coupled components (<span class="math inline">\(\widehat{W}\)</span>, <span class="math inline">\(\tau\)</span>, <span class="math inline">\(V^{\text{rest}}\)</span>, <span class="math inline">\(f_\theta\)</span>, <span class="math inline">\(g_\phi\)</span>) from voltage traces alone is under-determined. Many different parameter combinations can produce indistinguishable voltage predictions. This degeneracy manifests as <strong>seed dependence</strong>: slight differences in random initialization can push the optimizer toward a different solution on the degenerate manifold. A GNN that accurately forecasts neural activity may nonetheless have recovered the wrong connectivity.</p>
+<p>The combined space of architecture, regularization, and training hyperparameters (~20 coupled parameters) is too large to explore exhaustively. Rather than grid search, we deployed a closed-loop system where Claude Code interpreted experiment results, maintained a structured research summary, and proposed the next intervention. At each iteration the agent selected parent configurations to mutate using an Upper Confidence Bound (UCB) tree search that balances exploitation of high-performing branches with exploration of under-visited regions. The system implemented a form of automated scientific reasoning: testable hypotheses were drawn, repeatable experiments validated or falsified them, and causal understanding progressively emerged [1].</p>
+<object type="image/svg+xml" data="assets/Fig_agentic_loop.svg" width="700">
+</object>
+<p>The primary optimization target is not prediction accuracy (which is easy) but <strong>identifiability</strong>: the coefficient of variation (CV) of connectivity <span class="math inline">\(R^2\)</span> across random seeds measures how consistently a configuration escapes the degenerate solution landscape. Across five explorations (600 iterations), the agent established transferable principles and falsified hypotheses. At each noise level, identifiability fails for a different reason and requires a different solution.</p>
+</section>
+<section id="identifiability-across-noise-regimes" class="level2">
+<h2 class="anchored" data-anchor-id="identifiability-across-noise-regimes">Identifiability Across Noise Regimes</h2>
+<p>The three noise conditions reveal three distinct faces of the ill-posedness problem. At <span class="math inline">\(\sigma{=}0\)</span> the bottleneck is geometric capacity of the representation space. At <span class="math inline">\(\sigma{=}0.05\)</span> it is the sharpness of the optimization landscape. At <span class="math inline">\(\sigma{=}0.5\)</span> it is the non-convexity of the loss surface itself. The agent discovered each mechanism through hypothesis-driven reasoning chains spanning tens to hundreds of iterations.</p>
+<section id="noise-free-sigma-0" class="level3">
+<h3 class="anchored" data-anchor-id="noise-free-sigma-0">Noise-free (<span class="math inline">\(\sigma = 0\)</span>)</h3>
+<p><em>160 iterations, 14 blocks</em></p>
+<p>The default configuration yields a mean connectivity <span class="math inline">\(R^2\)</span> of <span class="math inline">\(0.64 \pm 0.17\)</span> across five seeds, with two seeds falling below <span class="math inline">\(0.6\)</span>. The LLM agent first identified that weight L1 regularization, designed for noisy data, severely degrades noise-free performance (<span class="math inline">\(R^2 = 0.76\)</span> vs.&nbsp;<span class="math inline">\(0.90\)</span> without). It then found that increasing the embedding dimension from 2 to 4 raised connectivity to <span class="math inline">\(0.927\)</span>, but an 8-seed validation revealed a 37% catastrophic failure rate with batch size 2. The agent hypothesized that noisy early gradients trap the connectivity matrix <span class="math inline">\(W\)</span> in bad basins and that larger batches would smooth these gradients. Switching to batch size 4 eliminated all catastrophic failures but reduced the mean to <span class="math inline">\(0.894\)</span> due to fewer gradient steps per epoch. A systematic augmentation sweep identified <span class="math inline">\(\text{aug}{=}30\)</span> as optimal, restoring the mean to <span class="math inline">\(0.923 \pm 0.008\)</span> with a CV of <span class="math inline">\(0.82\%\)</span> and all seeds above <span class="math inline">\(0.9\)</span>.</p>
+<p><strong>Best config</strong>: <code>embedding_dim=4</code>, <code>batch_size=4</code>, <code>g_phi_diff=1500</code>, <code>aug_loop=30</code>, <code>n_epochs=1</code>. <strong>Result</strong>: <span class="math inline">\(R^2 = 0.92 \pm 0.01\)</span>, <strong>CV = 0.82%</strong> (4/4 seeds <span class="math inline">\(&gt; 0.91\)</span>).</p>
+</section>
+<section id="low-noise-sigma-0.05" class="level3">
+<h3 class="anchored" data-anchor-id="low-noise-sigma-0.05">Low noise (<span class="math inline">\(\sigma = 0.05\)</span>)</h3>
+<p><em>256 iterations, 22 blocks</em></p>
+<p>The default configuration achieves a mean connectivity <span class="math inline">\(R^2\)</span> of <span class="math inline">\(0.79 \pm 0.18\)</span>, with one seed collapsing to <span class="math inline">\(0.45\)</span>. The LLM agent found that uniformly scaling all learning rates by <span class="math inline">\(1.5\times\)</span> produced the single largest improvement (<span class="math inline">\(0.938 \to 0.971\)</span>). It combined this with batch size 4 and doubled <span class="math inline">\(W\)</span> sparsity (<span class="math inline">\(\lambda_{L1} = 1.5 \times 10^{-4}\)</span>), then performed a fine-grained augmentation sweep. This sweep revealed a narrow plateau at <span class="math inline">\(\text{aug} \in [34, 35]\)</span> with a sharp performance cliff at <span class="math inline">\(\text{aug}{=}36\)</span>, a structure that would be difficult to find without systematic search. The resulting best configuration achieves <span class="math inline">\(R^2 = 0.98 \pm 0.004\)</span> on five seeds. Extended validation at 12 seeds uncovered a structural <span class="math inline">\({\sim}8\%\)</span> catastrophic failure rate, indicating that the 1-epoch training framework has an irreducible seed-dependent bifurcation.</p>
+<p><strong>Best config</strong>: <code>batch_size=4</code>, <span class="math inline">\(1.5\times\)</span> learning rates, <code>aug_loop=35</code>, <code>W_L1=1.5e-4</code>, <code>n_epochs=1</code>. <strong>Result</strong>: <span class="math inline">\(R^2 = 0.98 \pm 0.004\)</span>, <strong>CV = 0.3%</strong> (5/5 seeds <span class="math inline">\(&gt; 0.97\)</span>).</p>
+</section>
+<section id="high-noise-sigma-0.5" class="level3">
+<h3 class="anchored" data-anchor-id="high-noise-sigma-0.5">High noise (<span class="math inline">\(\sigma = 0.5\)</span>)</h3>
+<p><em>204 iterations, 17 blocks</em></p>
+<p>The default configuration exhibits a <strong>bimodal</strong> landscape: <span class="math inline">\({\sim}25\%\)</span> of seeds catastrophically fail (<span class="math inline">\(R^2 \approx 0.20\)</span>) while the rest achieve near-perfect recovery (<span class="math inline">\(R^2 &gt;: 0.99\)</span>). The agent found that this failure rate is invariant to architecture depth, embedding dimension, and epoch count. Scaling all learning rates by <span class="math inline">\(1.5\times\)</span> was the single intervention that eliminated catastrophic failures (4/4 seeds robust, CV<span class="math inline">\({=}0.64\%\)</span>). The agent then found a <strong>non-monotonic augmentation landscape</strong>: <span class="math inline">\(\text{aug}{=}5\)</span> and <span class="math inline">\(\text{aug}{=}20\)</span> both give 0% failure at <span class="math inline">\(1.5\times\)</span> LRs, but <span class="math inline">\(\text{aug}{=}10\)</span> triggers 50% catastrophic failure. This destructive interference between augmentation and learning rate was confirmed by replication (8 seeds). The champion configuration (<span class="math inline">\(\text{aug}{=}15\)</span>, <span class="math inline">\(1.5\times\)</span> LRs) sits on the safe side of this valley. Extended validation at 12 seeds revealed a <span class="math inline">\({\sim}8\%\)</span> irreducible failure rate, lower than the 25% baseline but not fully eliminated.</p>
+<p><strong>Best config</strong>: <code>batch_size=2</code>, <span class="math inline">\(1.5\times\)</span> learning rates, <code>aug_loop=15</code>, <code>n_epochs=1</code>. <strong>Result</strong>: <span class="math inline">\(R^2 = 0.99 \pm 0.01\)</span>, <strong>CV = 0.98%</strong> (5/5 seeds <span class="math inline">\(&gt; 0.97\)</span>).</p>
+</section>
+<section id="joint-gnn-siren-sigma-0.05-24-iterations-2-blocks" class="level3">
+<h3 class="anchored" data-anchor-id="joint-gnn-siren-sigma-0.05-24-iterations-2-blocks">Joint GNN + SIREN (<span class="math inline">\(\sigma = 0.05\)</span>): 24 iterations, 2 blocks</h3>
+<p><strong>SIREN depth <span class="math inline">\(\geq 4\)</span> eliminates catastrophic failures</strong> (3-layer: 25% failure rate). 4 layers gives best connectivity (<span class="math inline">\(R^2 = 0.94\)</span>, CV = 0.90%); 5 layers gives best field reconstruction (<span class="math inline">\(R^2 = 0.83\)</span>, higher GNN variance). <code>omega=4096</code> outperforms 1024 in joint training — opposite of standalone SIREN.</p>
+</section>
+<section id="standalone-siren-sigma-0.05-152-iterations-13-blocks" class="level3">
+<h3 class="anchored" data-anchor-id="standalone-siren-sigma-0.05-152-iterations-13-blocks">Standalone SIREN (<span class="math inline">\(\sigma = 0.05\)</span>): 152 iterations, 13 blocks</h3>
+<p>Best field <span class="math inline">\(R^2 = 0.90\)</span> (<code>hidden_dim=768</code>, 7 layers, <code>omega=1750</code>, <code>lr=1.5e-7</code>, 60k steps). The dominant lever is <code>omega</code> (initial frequency scale): increasing it from 30 to 1024 yielded <span class="math inline">\(+0.24\)</span> <span class="math inline">\(R^2\)</span>, exceeding all other tuning combined. Higher omega (<span class="math inline">\(\geq 2000\)</span>) suffers from late-stage collapse, making 1750 optimal. Learning rate scales inversely with omega (<span class="math inline">\(\omega \times \text{lr} \approx 2.5 \times 10^{-4}\)</span>).</p>
+</section>
+</section>
+<section id="running-the-agentic-pipeline" class="level2">
+<h2 class="anchored" data-anchor-id="running-the-agentic-pipeline">Running the Agentic Pipeline</h2>
+<p><strong>Prerequisites.</strong> A Claude API subscription is required. We recommend running the pipeline inside a sandboxed environment such as a Dev Container to avoid unintended side effects.</p>
+<p>The command line:</p>
+<pre><code>python GNN_Agentic.py -o train_test_plot_Claude flyvis_noise_005_agentic iterations=48</code></pre>
+<p>The pipeline takes two inputs:</p>
+<ul>
+<li><strong>Config file</strong> (<code>config/fly/flyvis_noise_005_agentic.yaml</code>): defines the GNN architecture, training hyperparameters, and the <code>claude:</code> section controlling the exploration (block size, UCB constant, training budget, case study brief).</li>
+<li><strong>Instruction file</strong> (<code>LLM/instruction_flyvis_noise_005_agentic.md</code>): system prompt describing the problem, the available hyperparameters, and the metrics the agent should optimize.</li>
+</ul>
+<p>All outputs are written to <code>log/Claude_exploration/LLM_flyvis_noise_005_agentic/</code>:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Path</th>
+<th style="text-align: left;">Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>configs/</code></td>
+<td style="text-align: left;">YAML snapshots of every configuration tested</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>results/</code></td>
+<td style="text-align: left;">Per-iteration metrics and plots</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>tree/</code></td>
+<td style="text-align: left;">UCB search-tree visualizations</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>*_Claude_analysis.md</code></td>
+<td style="text-align: left;"><strong>Research summary</strong> — the agent’s running synthesis of all experiments, hypotheses tested, and current best configurations</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>*_Claude_memory.md</code></td>
+<td style="text-align: left;"><strong>Research memory</strong> — compact factual records the agent carries across iterations</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>*_Claude_reasoning.log</code></td>
+<td style="text-align: left;">Full reasoning trace for every batch</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>*_Claude_ucb_scores.txt</code></td>
+<td style="text-align: left;">UCB scores guiding parent selection</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<p>[1] C. Allier, L. Heinrich, M. Schneider, S. Saalfeld, “Graph neural networks uncover structure and functions underlying the activity of simulated neural assemblies,” <em>arXiv:2602.13325</em>, 2026. <a href="https://doi.org/10.48550/arXiv.2602.13325">doi:10.48550/arXiv.2602.13325</a></p>
+<p>[2] B. Romera-Paredes et al., “Mathematical discoveries from program search with large language models,” <em>Nature</em>, 2024.</p>
+<p>[3] A. Novikov et al., “AlphaEvolve: A coding agent for scientific and algorithmic exploration,” 2025.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    // Ensure there is a toggle, if there isn't float one in the top right
+    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+      const a = window.document.createElement('a');
+      a.classList.add('top-right');
+      a.classList.add('quarto-color-scheme-toggle');
+      a.href = "";
+      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+      const i = window.document.createElement("i");
+      i.classList.add('bi');
+      a.appendChild(i);
+      window.document.body.appendChild(a);
+    }
+    setColorSchemeToggle(hasAlternateSentinel())
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/saalfeldlab\.github\.io\/flyvis-gnn\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p>Copyright 2026, Saalfeld Lab — Part of the text was generated by Claude and reviewed by C. Allier</p>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/saalfeldlab/flyvis-gnn/blob/main/Notebook_09.py" class="toc-action"><i class="bi bi-github"></i>View source</a></li></ul></div></div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

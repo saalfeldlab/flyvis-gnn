@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Allier, Lappalainen, Saalfeld">
+<meta name="description" content="Train a message-passing GNN to approximate the circuit dynamics from voltage traces alone, learning synaptic weights, neuron embeddings, and nonlinear activation functions at each noise level.">
+
+<title>GNN Training: Learning Circuit Dynamics – FlyVis-GNN</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-f418161beb48e0141c760e455f12af2c.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-1b0245fd8715271636a5b948b6a93c7c.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-54a424d5da18b3909adf4788aabbfdea.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-1b0245fd8715271636a5b948b6a93c7c.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script src="site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+    const toggleBodyColorMode = (bsSheetEl) => {
+      const mode = bsSheetEl.getAttribute("data-mode");
+      const bodyEl = window.document.querySelector("body");
+      if (mode === "dark") {
+        bodyEl.classList.add("quarto-dark");
+        bodyEl.classList.remove("quarto-light");
+      } else {
+        bodyEl.classList.add("quarto-light");
+        bodyEl.classList.remove("quarto-dark");
+      }
+    }
+    const toggleBodyColorPrimary = () => {
+      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
+      if (bsSheetEl) {
+        toggleBodyColorMode(bsSheetEl);
+      }
+    }
+    const setColorSchemeToggle = (alternate) => {
+      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+      for (let i=0; i < toggles.length; i++) {
+        const toggle = toggles[i];
+        if (toggle) {
+          if (alternate) {
+            toggle.classList.add("alternate");
+          } else {
+            toggle.classList.remove("alternate");
+          }
+        }
+      }
+    };
+    const toggleColorMode = (alternate) => {
+      // Switch the stylesheets
+      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
+      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+      manageTransitions('#quarto-margin-sidebar .nav-link', false);
+      if (alternate) {
+        // note: dark is layered on light, we don't disable primary!
+        enableStylesheet(alternateStylesheets);
+        for (const sheetNode of alternateStylesheets) {
+          if (sheetNode.id === "quarto-bootstrap") {
+            toggleBodyColorMode(sheetNode);
+          }
+        }
+      } else {
+        disableStylesheet(alternateStylesheets);
+        enableStylesheet(primaryStylesheets)
+        toggleBodyColorPrimary();
+      }
+      manageTransitions('#quarto-margin-sidebar .nav-link', true);
+      // Switch the toggles
+      setColorSchemeToggle(alternate)
+      // Hack to workaround the fact that safari doesn't
+      // properly recolor the scrollbar when toggling (#1455)
+      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+        manageTransitions("body", false);
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          manageTransitions("body", true);
+        }, 40);
+      }
+    }
+    const disableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        stylesheet.rel = 'disabled-stylesheet';
+      }
+    }
+    const enableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
+          stylesheet.rel = 'stylesheet';
+        }
+      }
+    }
+    const manageTransitions = (selector, allowTransitions) => {
+      const els = window.document.querySelectorAll(selector);
+      for (let i=0; i < els.length; i++) {
+        const el = els[i];
+        if (allowTransitions) {
+          el.classList.remove('notransition');
+        } else {
+          el.classList.add('notransition');
+        }
+      }
+    }
+    const isFileUrl = () => {
+      return window.location.protocol === 'file:';
+    }
+    const hasAlternateSentinel = () => {
+      let styleSentinel = getColorSchemeSentinel();
+      if (styleSentinel !== null) {
+        return styleSentinel === "alternate";
+      } else {
+        return false;
+      }
+    }
+    const setStyleSentinel = (alternate) => {
+      const value = alternate ? "alternate" : "default";
+      if (!isFileUrl()) {
+        window.localStorage.setItem("quarto-color-scheme", value);
+      } else {
+        localAlternateSentinel = value;
+      }
+    }
+    const getColorSchemeSentinel = () => {
+      if (!isFileUrl()) {
+        const storageValue = window.localStorage.getItem("quarto-color-scheme");
+        return storageValue != null ? storageValue : localAlternateSentinel;
+      } else {
+        return localAlternateSentinel;
+      }
+    }
+    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+      let newTheme = '';
+      if(authorPrefersDark) {
+        newTheme = isAlternate ? baseTheme : alternateTheme;
+      } else {
+        newTheme = isAlternate ? alternateTheme : baseTheme;
+      }
+      const changeGiscusTheme = () => {
+        // From: https://github.com/giscus/giscus/issues/336
+        const sendMessage = (message) => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          if (!iframe) return;
+          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+        }
+        sendMessage({
+          setConfig: {
+            theme: newTheme
+          }
+        });
+      }
+      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+      if (isGiscussLoaded) {
+        changeGiscusTheme();
+      }
+    };
+    const authorPrefersDark = false;
+    const darkModeDefault = authorPrefersDark;
+      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+    // Dark / light mode switch
+    window.quartoToggleColorScheme = () => {
+      // Read the current dark / light value
+      let toAlternate = !hasAlternateSentinel();
+      toggleColorMode(toAlternate);
+      setStyleSentinel(toAlternate);
+      toggleGiscusIfUsed(toAlternate, darkModeDefault);
+      window.dispatchEvent(new Event('resize'));
+    };
+    // Switch to dark mode if need be
+    if (hasAlternateSentinel()) {
+      toggleColorMode(true);
+    } else {
+      toggleColorMode(false);
+    }
+  </script>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">FlyVis-GNN</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+    <a href="https://github.com/saalfeldlab/flyvis-gnn" title="" class="quarto-navigation-tool px-1" aria-label=""><i class="bi bi-github"></i></a>
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#graph-neural-network-model" id="toc-graph-neural-network-model" class="nav-link active" data-scroll-target="#graph-neural-network-model">Graph Neural Network Model</a>
+  <ul class="collapse">
+  <li><a href="#degeneracy-of-the-inverse-problem" id="toc-degeneracy-of-the-inverse-problem" class="nav-link" data-scroll-target="#degeneracy-of-the-inverse-problem">Degeneracy of the Inverse Problem</a></li>
+  <li><a href="#regularization" id="toc-regularization" class="nav-link" data-scroll-target="#regularization">Regularization</a></li>
+  <li><a href="#mlp-architecture" id="toc-mlp-architecture" class="nav-link" data-scroll-target="#mlp-architecture">MLP Architecture</a></li>
+  <li><a href="#training-parameters" id="toc-training-parameters" class="nav-link" data-scroll-target="#training-parameters">Training Parameters</a></li>
+  </ul></li>
+  <li><a href="#gnn-training" id="toc-gnn-training" class="nav-link" data-scroll-target="#gnn-training">GNN training</a></li>
+  <li><a href="#loss-decomposition" id="toc-loss-decomposition" class="nav-link" data-scroll-target="#loss-decomposition">Loss Decomposition</a>
+  <ul class="collapse">
+  <li><a href="#noise-free-sigma-0" id="toc-noise-free-sigma-0" class="nav-link" data-scroll-target="#noise-free-sigma-0">Noise-free (<span class="math inline">\(\sigma = 0\)</span>)</a></li>
+  <li><a href="#low-noise-sigma-0.05" id="toc-low-noise-sigma-0.05" class="nav-link" data-scroll-target="#low-noise-sigma-0.05">Low noise (<span class="math inline">\(\sigma = 0.05\)</span>)</a></li>
+  <li><a href="#high-noise-sigma-0.5" id="toc-high-noise-sigma-0.5" class="nav-link" data-scroll-target="#high-noise-sigma-0.5">High noise (<span class="math inline">\(\sigma = 0.5\)</span>)</a></li>
+  </ul></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/saalfeldlab/flyvis-gnn/blob/main/Notebook_01.py" class="toc-action"><i class="bi bi-github"></i>View source</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">GNN Training: Learning Circuit Dynamics</h1><button type="button" class="btn code-tools-button dropdown-toggle" id="quarto-code-tools-menu" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi"></i> Code</button><ul class="dropdown-menu dropdown-menu-end" aria-labelelledby="quarto-code-tools-menu"><li><a id="quarto-show-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Show All Code</a></li><li><a id="quarto-hide-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Hide All Code</a></li><li><hr class="dropdown-divider"></li><li><a id="quarto-view-source" class="dropdown-item" href="javascript:void(0)" role="button" data-quarto-source-url="https://github.com/saalfeldlab/flyvis-gnn/blob/main/Notebook_01.py">View Source</a></li></ul></div></div>
+  <div class="quarto-categories">
+    <div class="quarto-category">FlyVis</div>
+    <div class="quarto-category">GNN</div>
+    <div class="quarto-category">Training</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    Train a message-passing GNN to approximate the circuit dynamics from voltage traces alone, learning synaptic weights, neuron embeddings, and nonlinear activation functions at each noise level.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Allier, Lappalainen, Saalfeld </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="graph-neural-network-model" class="level2">
+<h2 class="anchored" data-anchor-id="graph-neural-network-model">Graph Neural Network Model</h2>
+<p>We approximated the simulated voltage dynamics by a message-passing GNN [1]:</p>
+<p><span class="math display">\[\frac{\widehat{dv}_i(t)}{dt} = f_\theta\!\left(v_i(t),\,\mathbf{a}_i,\,\sum_{j\in\mathcal{N}_i} \widehat{W}_{ij}\,g_\phi\!\big(v_j(t),\,\mathbf{a}_j\big)^2,\,I_i(t)\right).\]</span></p>
+<p>Nodes of the GNN correspond to neurons and edges correspond to functional synaptic connections. The GNN learned a latent embedding <span class="math inline">\(\mathbf{a}_i \in \mathbb{R}^2\)</span> for each neuron <span class="math inline">\(i\)</span>, giving each neuron a compact latent identity to capture cell-type specific properties (like time constants and nonlinearities).</p>
+<p>Neuron update <span class="math inline">\(f_\theta = \text{MLP}_0\)</span> and edge message <span class="math inline">\(g_\phi = \text{MLP}_1\)</span> are three-layer perceptrons (width 80, ReLU, linear output). <span class="math inline">\(g_\phi\)</span> maps presynaptic inputs <span class="math inline">\(v_j\)</span> to nonnegative messages (via squaring) depending on neural embedding <span class="math inline">\(\mathbf{a}_j\)</span>, which are weighted by <span class="math inline">\(\widehat{W}_{ij}\)</span>. <span class="math inline">\(f_\theta\)</span> processes the postsynaptic voltage <span class="math inline">\(v_i\)</span>, aggregated input, and external input <span class="math inline">\(I_i(t)\)</span> to predict <span class="math inline">\(\widehat{dv}_i(t)/dt\)</span>, depending on neural embedding <span class="math inline">\(\mathbf{a}_i\)</span>.</p>
+<p>During training, inputs <span class="math inline">\(I_i(t)\)</span>, adjacency <span class="math inline">\(\mathcal{N}_i\)</span>, and activity <span class="math inline">\(v_i(t)\)</span> are given. The MLPs, <span class="math inline">\(\widehat{W}_{ij}\)</span>, and <span class="math inline">\(\mathbf{a}_i\)</span> are optimized by minimizing</p>
+<p><span class="math display">\[\mathcal{L}_{\text{pred}} = \sum_{i,t} \|\hat{y}_i(t) - y_i(t)\|^2\]</span></p>
+<p>between simulator targets <span class="math inline">\(y_i(t) = dv_i(t)/dt\)</span> and GNN predictions <span class="math inline">\(\hat{y}_i(t) = \widehat{dv}_i(t)/dt\)</span>.</p>
+<section id="degeneracy-of-the-inverse-problem" class="level3">
+<h3 class="anchored" data-anchor-id="degeneracy-of-the-inverse-problem">Degeneracy of the Inverse Problem</h3>
+<p>The inverse problem solved by the GNN is <strong>ill-posed</strong>: recovering five coupled components, <span class="math inline">\(\widehat{W}\)</span>, <span class="math inline">\(\tau\)</span>, <span class="math inline">\(V^{\text{rest}}\)</span>, <span class="math inline">\(f_\theta\)</span>, and <span class="math inline">\(g_\phi\)</span> from voltage traces alone is under-determined. Many different parameter combinations can produce indistinguishable voltage predictions. This degeneracy manifests as <strong>seed dependence</strong>: slight differences in the random initialization, noise realization, or stimulus sampling can push the optimizer toward a different optimum on the degenerate solution landscape.</p>
+<p>The regularization terms below address this degeneracy by constraining the solution space: simplicity penalties on the MLPs, monotonicity priors on <span class="math inline">\(g_\phi\)</span>, and sparsity on <span class="math inline">\(\widehat{W}\)</span>. A systematic approach to quantifying and reducing degeneracy through agentic hyper-parameter optimization is presented in <a href="Notebook_09.html">Notebook 09</a>.</p>
+</section>
+<section id="regularization" class="level3">
+<h3 class="anchored" data-anchor-id="regularization">Regularization</h3>
+<p>We augmented the objective loss with several regularization terms:</p>
+<p><span class="math display">\[\mathcal{L} = \underbrace{\lVert\widehat{\mathbf{y}}-\mathbf{y}\rVert_2}_{\text{prediction}} + \lambda_0\lVert\theta\rVert_1 + \lambda_1\lVert\phi\rVert_1 + \lambda_2\lVert\widehat{\mathbf{W}}\rVert_1 + \gamma_0\lVert\theta\rVert_2 + \gamma_1\lVert\phi\rVert_2 + \gamma_2\lVert\widehat{\mathbf{W}}\rVert_2 + \mu_0\left\lVert\mathrm{ReLU}\!\left(-\tfrac{\partial\,g_\phi}{\partial v}\right)\right\rVert_2 + \mu_1\lVert g_\phi(v_\star,\mathbf{a})-v_\star\rVert_2\]</span></p>
+<p>The <span class="math inline">\(\ell_1\)</span> and <span class="math inline">\(\ell_2\)</span> penalties on the MLP parameters <span class="math inline">\(\theta\)</span> and <span class="math inline">\(\phi\)</span> act as <strong>simplicity regularizers</strong>: they bias the learned functions <span class="math inline">\(f_\theta\)</span> and <span class="math inline">\(g_\phi\)</span> toward simpler input–output mappings, reducing the space of degenerate solutions that fit the observed derivatives equally well. The <span class="math inline">\(\ell_1\)</span> term (<span class="math inline">\(\lambda_2\)</span>) additionally promotes sparsity in the connectivity matrix. The <span class="math inline">\(\ell_2\)</span> term (<span class="math inline">\(\gamma_2\)</span>) promotes low values in the connectivity matrix. The derivative term (<span class="math inline">\(\mu_0\)</span>) enforces that the edge message <span class="math inline">\(g_\phi\)</span> increases monotonically with voltage, and the normalization term (<span class="math inline">\(\mu_1\)</span>) anchors <span class="math inline">\(g_\phi\)</span> at a reference voltage <span class="math inline">\(v_\star\)</span>.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Equation term</th>
+<th>Config key</th>
+<th>Plot legend</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\lambda_0\lVert\theta\rVert_1\)</span>, <span class="math inline">\(\gamma_0\lVert\theta\rVert_2\)</span></td>
+<td><code>coeff_f_theta_weight_L1</code>, <code>coeff_f_theta_weight_L2</code></td>
+<td><span class="math inline">\(f_\theta\)</span> weight regul</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\lambda_1\lVert\phi\rVert_1\)</span>, <span class="math inline">\(\gamma_1\lVert\phi\rVert_2\)</span></td>
+<td><code>coeff_g_phi_weight_L1</code>, <code>coeff_g_phi_weight_L2</code></td>
+<td><span class="math inline">\(g_\phi\)</span> weight regul</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\lambda_2\lVert\widehat{\mathbf{W}}\rVert_1\)</span></td>
+<td><code>coeff_W_L1</code></td>
+<td><span class="math inline">\(\widehat{\mathbf{W}}\)</span> <span class="math inline">\(L_1\)</span> sparsity</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\gamma_2\lVert\widehat{\mathbf{W}}\rVert_2\)</span></td>
+<td><code>coeff_W_L2</code></td>
+<td><span class="math inline">\(\widehat{\mathbf{W}}\)</span> <span class="math inline">\(L_2\)</span> regul</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mu_0\)</span> monotonicity</td>
+<td><code>coeff_g_phi_diff</code></td>
+<td><span class="math inline">\(g_\phi\)</span> monotonicity</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mu_1\)</span> normalization</td>
+<td><code>coeff_g_phi_norm</code></td>
+<td><span class="math inline">\(g_\phi\)</span> norm</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Annealing.</strong> The weight-based regularizers (<span class="math inline">\(L_1\)</span>/<span class="math inline">\(L_2\)</span> on <span class="math inline">\(\theta\)</span>, <span class="math inline">\(\phi\)</span>, and <span class="math inline">\(\widehat{\mathbf{W}}\)</span>) are not applied at full strength from the start. Instead they follow an exponential ramp-up schedule <span class="math inline">\(c(e) = c_{\max}\,(1 - e^{-0.5\,e})\)</span> where <span class="math inline">\(e\)</span> is the epoch number, so the model can first learn the dynamics before regularization pressure increases. The structural penalties (<span class="math inline">\(g_\phi\)</span> monotonicity and norm) are applied at constant strength throughout training.</p>
+</section>
+<section id="mlp-architecture" class="level3">
+<h3 class="anchored" data-anchor-id="mlp-architecture">MLP Architecture</h3>
+<p>Both MLPs use ReLU activations with a linear output layer. The architecture is shared across all three noise conditions except for the embedding dimension.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 11%">
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 19%">
+<col style="width: 17%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Layers</th>
+<th>Hidden dim</th>
+<th>Input size</th>
+<th>Output size</th>
+<th>Activation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(g_\phi\)</span> (MLP<span class="math inline">\(_1\)</span>, edge message)</td>
+<td>3</td>
+<td>80</td>
+<td><span class="math inline">\(1 + d_\text{emb}\)</span></td>
+<td>1</td>
+<td>ReLU, squared output</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(f_\theta\)</span> (MLP<span class="math inline">\(_0\)</span>, node update)</td>
+<td>3</td>
+<td>80</td>
+<td><span class="math inline">\(3 + d_\text{emb}\)</span></td>
+<td>1</td>
+<td>ReLU, linear output</td>
+</tr>
+</tbody>
+</table>
+<p>The embedding dimension <span class="math inline">\(d_\text{emb} = 4\)</span> for the noise-free model and <span class="math inline">\(d_\text{emb} = 2\)</span> for both noisy conditions.</p>
+</section>
+<section id="training-parameters" class="level3">
+<h3 class="anchored" data-anchor-id="training-parameters">Training Parameters</h3>
+<p>We found different training hyperparameters for each of the three noise conditions. The noise-free model relied almost exclusively on the monotonicity penalty (<span class="math inline">\(\mu_0 = 1500\)</span>) with a larger embedding dimension (<span class="math inline">\(d_\text{emb} = 4\)</span>). At <span class="math inline">\(\sigma = 0.05\)</span> and <span class="math inline">\(\sigma = 0.5\)</span>, <span class="math inline">\(L_1\)</span> sparsity on the connectivity matrix and both MLPs was activated, and the <span class="math inline">\(g_\phi\)</span> normalization term was turned on (<span class="math inline">\(\mu_1 = 0.9\)</span>). The two noisy conditions differed mainly in that <span class="math inline">\(\sigma = 0.05\)</span> used higher learning rates and more data augmentation (35 vs 20 loops), while <span class="math inline">\(\sigma = 0.5\)</span> required stronger <span class="math inline">\(f_\theta\)</span> <span class="math inline">\(L_1\)</span> regularization (<span class="math inline">\(\lambda_0 = 0.5\)</span> vs <span class="math inline">\(0.05\)</span>).</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>Noise-free</th>
+<th>Noise 0.05</th>
+<th>Noise 0.5</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>n_epochs</code></td>
+<td>5</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr class="even">
+<td><code>batch_size</code></td>
+<td>2</td>
+<td>4</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td><code>data_augmentation_loop</code></td>
+<td>20</td>
+<td>35</td>
+<td>20</td>
+</tr>
+<tr class="even">
+<td><code>embedding_dim</code></td>
+<td>4</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(N_\text{iter}\)</span> / epoch</td>
+<td>128,000</td>
+<td>112,000</td>
+<td>128,000</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(N_\text{iter}\)</span> total</td>
+<td>640,000</td>
+<td>112,000</td>
+<td>128,000</td>
+</tr>
+<tr class="odd">
+<td><code>learning_rate_W</code></td>
+<td>6e-4</td>
+<td>9e-4</td>
+<td>6e-4</td>
+</tr>
+<tr class="even">
+<td><code>learning_rate</code> (<span class="math inline">\(g_\phi\)</span>, <span class="math inline">\(f_\theta\)</span>)</td>
+<td>1.8e-3</td>
+<td>1.8e-3</td>
+<td>1.2e-3</td>
+</tr>
+<tr class="odd">
+<td><code>learning_rate_embedding</code></td>
+<td>1.55e-3</td>
+<td>2.3e-3</td>
+<td>1.55e-3</td>
+</tr>
+<tr class="even">
+<td><code>coeff_g_phi_diff</code> (<span class="math inline">\(\mu_0\)</span>)</td>
+<td>1500</td>
+<td>750</td>
+<td>750</td>
+</tr>
+<tr class="odd">
+<td><code>coeff_g_phi_norm</code> (<span class="math inline">\(\mu_1\)</span>)</td>
+<td>0</td>
+<td>0.9</td>
+<td>0.9</td>
+</tr>
+<tr class="even">
+<td><code>coeff_g_phi_weight_L1</code> (<span class="math inline">\(\lambda_1\)</span>)</td>
+<td>0</td>
+<td>0.28</td>
+<td>0.28</td>
+</tr>
+<tr class="odd">
+<td><code>coeff_f_theta_weight_L1</code> (<span class="math inline">\(\lambda_0\)</span>)</td>
+<td>0</td>
+<td>0.05</td>
+<td>0.5</td>
+</tr>
+<tr class="even">
+<td><code>coeff_f_theta_weight_L2</code> (<span class="math inline">\(\gamma_0\)</span>)</td>
+<td>1e-3</td>
+<td>1e-3</td>
+<td>1e-3</td>
+</tr>
+<tr class="odd">
+<td><code>coeff_W_L1</code> (<span class="math inline">\(\lambda_2\)</span>)</td>
+<td>0</td>
+<td>1.5e-4</td>
+<td>7.5e-5</td>
+</tr>
+<tr class="even">
+<td><code>coeff_W_L2</code> (<span class="math inline">\(\gamma_2\)</span>)</td>
+<td>1.5e-6</td>
+<td>1.5e-6</td>
+<td>1.5e-6</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="gnn-training" class="level2">
+<h2 class="anchored" data-anchor-id="gnn-training">GNN training</h2>
+<p>For each noise condition we trained the GNN on the full 64,000-frame dataset. At each iteration a random time frame <span class="math inline">\(k\)</span> was sampled and the model predicted <span class="math inline">\(\widehat{dv}/dt\)</span> from the current voltages, stimulus, and graph structure. Training proceeded for the number of iterations specified in the configuration table above.</p>
+<div id="b15fba2e" class="cell" data-execution_count="3">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>()</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"="</span> <span class="op">*</span> <span class="dv">80</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"TRAIN - Training GNN on fly visual system data"</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"="</span> <span class="op">*</span> <span class="dv">80</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> config_name, label <span class="kw">in</span> datasets:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    config <span class="op">=</span> configs[config_name]</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    graphs_dir <span class="op">=</span> graphs_dirs[config_name]</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>()</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"--- </span><span class="sc">{</span>label<span class="sc">}</span><span class="ss"> ---"</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    model_dir <span class="op">=</span> os.path.join(log_path(config.config_file), <span class="st">"models"</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    model_exists <span class="op">=</span> os.path.isdir(model_dir) <span class="kw">and</span> <span class="bu">any</span>(</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        f.startswith(<span class="st">"best_model"</span>) <span class="cf">for</span> f <span class="kw">in</span> os.listdir(model_dir)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    ) <span class="cf">if</span> os.path.isdir(model_dir) <span class="cf">else</span> <span class="va">False</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    loss_exists <span class="op">=</span> os.path.isfile(os.path.join(log_path(config.config_file), <span class="st">"loss_components.pt"</span>))</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> model_exists:</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"  trained model already present in </span><span class="sc">{</span>model_dir<span class="sc">}</span><span class="ss">/"</span>)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> loss_exists:</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="st">"  loss_components.pt also present."</span>)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">"  skipping training. To retrain, delete the log folder:"</span>)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"    rm -rf </span><span class="sc">{</span>log_path(config.config_file)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"  training on </span><span class="sc">{</span>config<span class="sc">.</span>simulation<span class="sc">.</span>n_frames<span class="sc">}</span><span class="ss"> frames"</span>)</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"  </span><span class="sc">{</span>config<span class="sc">.</span>training<span class="sc">.</span>n_epochs<span class="sc">}</span><span class="ss"> epochs, batch_size=</span><span class="sc">{</span>config<span class="sc">.</span>training<span class="sc">.</span>batch_size<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>()</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>        data_train(config, device<span class="op">=</span>device)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="loss-decomposition" class="level2">
+<h2 class="anchored" data-anchor-id="loss-decomposition">Loss Decomposition</h2>
+<p>The plots below decompose the total training loss <span class="math inline">\(\mathcal{L}\)</span> into its constituent terms for each noise condition. Recall, the simulated dynamics include an intrinsic noise term <span class="math inline">\(\sigma\,\xi_i(t)\)</span> where <span class="math inline">\(\xi_i(t) \sim \mathcal{N}(0,1)\)</span> (see Notebook 00). We train the GNN at three noise levels: <span class="math inline">\(\sigma = 0\)</span> (noise-free), <span class="math inline">\(\sigma = 0.05\)</span> (low noise), and <span class="math inline">\(\sigma = 0.5\)</span> (high noise).</p>
+<section id="noise-free-sigma-0" class="level3">
+<h3 class="anchored" data-anchor-id="noise-free-sigma-0">Noise-free (<span class="math inline">\(\sigma = 0\)</span>)</h3>
+<div id="ebe81874" class="cell" data-execution_count="4">
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><a href="Notebook_01_files/figure-html/cell-5-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-1"><img src="Notebook_01_files/figure-html/cell-5-output-1.png" class="img-fluid figure-img" width="900"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="low-noise-sigma-0.05" class="level3">
+<h3 class="anchored" data-anchor-id="low-noise-sigma-0.05">Low noise (<span class="math inline">\(\sigma = 0.05\)</span>)</h3>
+<div id="a9bcb316" class="cell" data-execution_count="5">
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><a href="Notebook_01_files/figure-html/cell-6-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="Notebook_01_files/figure-html/cell-6-output-1.png" class="img-fluid figure-img" width="900"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="high-noise-sigma-0.5" class="level3">
+<h3 class="anchored" data-anchor-id="high-noise-sigma-0.5">High noise (<span class="math inline">\(\sigma = 0.5\)</span>)</h3>
+<div id="3b8fad6c" class="cell" data-execution_count="6">
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><a href="Notebook_01_files/figure-html/cell-7-output-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="Notebook_01_files/figure-html/cell-7-output-1.png" class="img-fluid figure-img" width="900"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<p>[1] J. Gilmer et al., “Neural Message Passing for Quantum Chemistry,” 2017. <a href="https://doi.org/10.48550/arXiv.1704.01212">doi:10.48550/arXiv.1704.01212</a></p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    // Ensure there is a toggle, if there isn't float one in the top right
+    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+      const a = window.document.createElement('a');
+      a.classList.add('top-right');
+      a.classList.add('quarto-color-scheme-toggle');
+      a.href = "";
+      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+      const i = window.document.createElement("i");
+      i.classList.add('bi');
+      a.appendChild(i);
+      window.document.body.appendChild(a);
+    }
+    setColorSchemeToggle(hasAlternateSentinel())
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/saalfeldlab\.github\.io\/flyvis-gnn\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p>Copyright 2026, Saalfeld Lab — Part of the text was generated by Claude and reviewed by C. Allier</p>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/saalfeldlab/flyvis-gnn/blob/main/Notebook_01.py" class="toc-action"><i class="bi bi-github"></i>View source</a></li></ul></div></div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
+
+
+
+
+</body></html>
