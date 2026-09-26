@@ -60,7 +60,7 @@ training:
   coeff_g_phi_weight_L1: 0.28
   coeff_f_theta_weight_L1: 0.5
   coeff_g_phi_weight_L2: 0
-  coeff_f_theta_weight_L2: 0.001
+  coeff_f_theta_weight_L2: 0
   coeff_W_L1: 7.5e-05
   coeff_W_L2: 1.5e-06
   regul_annealing_rate: 0
