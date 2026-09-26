@@ -201,7 +201,7 @@ def run_training_local(config, device):
 
 def _local_to_cluster(path, root_dir):
     """Map a local workspace path to the cluster path (same logic as GNN_LLM.py)."""
-    cluster_home = "/groups/saalfeld/home/allierc"
+    cluster_home = os.environ["CLUSTER_HOME"]      # local setting, never committed (public repo)
     cluster_data_dir = f"{cluster_home}/GraphData"
     cluster_root_dir = f"{cluster_home}/GraphCluster/flyvis-gnn"
     for sub in ('config', 'log', 'graphs_data'):
@@ -213,7 +213,7 @@ def _local_to_cluster(path, root_dir):
 
 def run_training_cluster(config_name, root_dir, log_dir):
     """Submit training to cluster via SSH + bsub (pattern from GNN_LLM.py)."""
-    cluster_home = "/groups/saalfeld/home/allierc"
+    cluster_home = os.environ["CLUSTER_HOME"]      # local setting, never committed (public repo)
     cluster_root_dir = f"{cluster_home}/GraphCluster/flyvis-gnn"
 
     config_file, pre_folder = add_pre_folder(config_name)
@@ -234,8 +234,8 @@ def run_training_cluster(config_name, root_dir, log_dir):
     cluster_script = _local_to_cluster(cluster_script_path, root_dir)
 
     ssh_cmd = (
-        f"ssh allierc@login1 \"cd {cluster_root_dir} && "
-        f"bsub -n 8 -gpu 'num=1' -q gpu_h100 -W 6000 -K "
+        f"ssh {os.environ['CLUSTER_SSH']} \"cd {cluster_root_dir} && "
+        f"bsub -n 8 -gpu 'num=1' -q {os.environ['CLUSTER_QUEUE_PREFIX']}h100 -W 6000 -K "
         f"'bash {cluster_script}'\""
     )
 
@@ -283,7 +283,7 @@ def run_test_plot(config, config_file, device):
 
 def run_test_plot_cluster(config_name, root_dir, log_dir):
     """Submit test_plot to cluster via SSH + bsub."""
-    cluster_home = "/groups/saalfeld/home/allierc"
+    cluster_home = os.environ["CLUSTER_HOME"]      # local setting, never committed (public repo)
     cluster_root_dir = f"{cluster_home}/GraphCluster/flyvis-gnn"
 
     cluster_cmd = f"python GNN_Main.py -o test_plot {config_name}"
@@ -298,8 +298,8 @@ def run_test_plot_cluster(config_name, root_dir, log_dir):
     cluster_script = _local_to_cluster(cluster_script_path, root_dir)
 
     ssh_cmd = (
-        f"ssh allierc@login1 \"cd {cluster_root_dir} && "
-        f"bsub -n 8 -gpu 'num=1' -q gpu_h100 -W 6000 -K "
+        f"ssh {os.environ['CLUSTER_SSH']} \"cd {cluster_root_dir} && "
+        f"bsub -n 8 -gpu 'num=1' -q {os.environ['CLUSTER_QUEUE_PREFIX']}h100 -W 6000 -K "
         f"'bash {cluster_script}'\""
     )
 
@@ -604,4 +604,4 @@ if __name__ == '__main__':
     main()
 
 # python GNN_Test.py --config flyvis_noise_005 --cluster
-# bsub -n 8 -gpu "num=1" -q gpu_a100 -W 6000 -Is "python GNN_Test.py --config flyvis_noise_005 --cluster"
+# bsub -n 8 -gpu "num=1" -q ${CLUSTER_QUEUE_PREFIX}a100 -W 6000 -Is "python GNN_Test.py --config flyvis_noise_005 --cluster"

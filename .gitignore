@@ -37,17 +37,10 @@ config/fly/*
 paper/
 papers/
 
-# Log folder - include models/*.pt and loss_components.pt, exclude everything else
+# Log folder - all training output is ignored. The checkpoints and loss_components.pt already
+# published stay tracked; publishing a new one takes an explicit `git add -f`.
 log/**/*
 !log/.gitkeep
-!log/fly/
-!log/fly/**/
-!log/fly/**/models/
-!log/fly/**/models/*.pt
-!log/fly/flyvis_noise_free/loss_components.pt
-!log/fly/flyvis_noise_005/loss_components.pt
-!log/fly/flyvis_noise_05/loss_components.pt
-!log/fly/flyvis_noise_005_INR/loss_components.pt
 
 # Ignore edge_index.pt and mask.pt everywhere (recreated from connectivity)
 **/edge_index.pt
